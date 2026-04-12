@@ -1,0 +1,11 @@
+{
+	"name": "horse",
+	"description": "teste",
+	"version": "1",
+	"homepage": "teste",
+	"mainsrc": "./src",
+	"projects": ["DroneDelivery.Server.dproj"],
+	"dependencies": {
+		"github.com/hashload/horse": "^3.2.0"
+	}
+}

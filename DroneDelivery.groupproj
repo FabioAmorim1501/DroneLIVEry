@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{D0224065-42C7-4F23-B8CE-5E74724BD580}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="src\server\DroneDelivery.Server.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="src\client\DroneDelivery.Client.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="DroneDelivery_Server">
+        <MSBuild Projects="src\server\DroneDelivery.Server.dproj"/>
+    </Target>
+    <Target Name="DroneDelivery_Server:Clean">
+        <MSBuild Projects="src\server\DroneDelivery.Server.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DroneDelivery_Server:Make">
+        <MSBuild Projects="src\server\DroneDelivery.Server.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DroneDelivery_Client">
+        <MSBuild Projects="src\client\DroneDelivery.Client.dproj"/>
+    </Target>
+    <Target Name="DroneDelivery_Client:Clean">
+        <MSBuild Projects="src\client\DroneDelivery.Client.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DroneDelivery_Client:Make">
+        <MSBuild Projects="src\client\DroneDelivery.Client.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DroneDelivery_Server;DroneDelivery_Client"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="DroneDelivery_Server:Clean;DroneDelivery_Client:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DroneDelivery_Server:Make;DroneDelivery_Client:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

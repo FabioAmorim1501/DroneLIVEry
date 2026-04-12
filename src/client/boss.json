@@ -1,0 +1,11 @@
+{
+	"name": "DroneDelivery.Client",
+	"description": "",
+	"version": "1",
+	"homepage": "teste",
+	"mainsrc": "./src",
+	"projects": [
+		"DroneDelivery.Client.dproj"
+	],
+	"dependencies": {}
+}

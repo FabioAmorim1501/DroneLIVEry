@@ -10,6 +10,8 @@ uses
   DataSet.Serialize,
   DroneDelivery.Server.Controller.Drones in 'Controllers\DroneDelivery.Server.Controller.Drones.pas',
   DroneDelivery.Server.Controller.Rotas in 'Controllers\DroneDelivery.Server.Controller.Rotas.pas',
+  DroneDelivery.Server.Service.Rotas in 'Services\DroneDelivery.Server.Service.Rotas.pas',
+  DroneDelivery.Server.Repository.Drone in 'Repositories\DroneDelivery.Server.Repository.Drone.pas',
   DroneDelivery.Server.Provider.Connection in 'Providers\DroneDelivery.Server.Provider.Connection.pas';
 
 begin
