@@ -1,0 +1,47 @@
+# Embarcadero Delphi / RAD Studio
+# Logs e histórico local
+__history/
+__recovery/
+*.identcache
+*.dproj.local
+*.projdata
+*.tvsconfig
+*.stat
+*.stat.*
+
+# Arquivos de compilação intermediários
+*.dcu
+*.drc
+*.map
+*.bpl
+*.dcp
+*.jdbg
+*.rsm
+*.skincfg
+
+# Diretórios de saída de compilação por plataforma
+Win32/
+Win64/
+Android/
+Android64/
+iOSDevice32/
+iOSDevice64/
+iOSSimulator/
+OSX32/
+OSX64/
+OSXARM64/
+Linux64/
+
+# Configurações de Deploy
+*.deployproj
+
+# Opcional: ignorar executáveis soltos na raiz (Delphi os compila nos diretórios Win32/Win64)
+# *.exe
+# *.dll
+
+# Ignorar diretórios `.vscode` ou `.idea` caso use outros editores
+.vscode/
+.idea/
+
+# Ignorar o diretório das ferramentas do AI (se houver logs gerados no projeto)
+scratch/
