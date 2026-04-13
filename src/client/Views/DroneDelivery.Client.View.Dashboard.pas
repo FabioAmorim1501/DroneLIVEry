@@ -21,7 +21,7 @@ uses
   FMX.Controls.Presentation, FMX.StdCtrls, FMX.Layouts, FMX.Effects, FMX.Ani,
   FMX.Edit, FMX.WebBrowser, FMX.ListBox,
   DroneDelivery.DTO.Drones, DroneDelivery.Client.ViewModel.Dashboard,
-  DroneDelivery.Client.Service.Maps;
+  DroneDelivery.Client.Service.Maps, System.IOUtils;
 
 type
   { Enum para identificar a visão ativa }
@@ -55,6 +55,7 @@ type
     procedure MenuOpsClick(Sender: TObject);
     procedure MenuCrudClick(Sender: TObject);
     procedure OnLoadCatalogueClick(Sender: TObject);
+    procedure OnDroneComboChange(Sender: TObject);
 
   private
     { Estado }
@@ -65,6 +66,7 @@ type
     FWaypoints: TObjectList<TMapPoint>;
     FSelectedDroneId: string;
     FSelectedDroneRange: Double;
+    FOpsDrones: TObjectList<TDroneDTO>; // Armazena os dados reais ocultos da UI
 
     { Componentes do Modal de Preço }
     FModalOverlay: TRectangle;
@@ -123,6 +125,7 @@ type
     procedure OnCatalogueModelClick(Sender: TObject);
     procedure OnSaveDroneClick(Sender: TObject);
     procedure OnSaveHangarClick(Sender: TObject);
+    procedure EnviarRotaAoMapa(const AJsonPontos: string);
 
   public
   end;
@@ -217,6 +220,7 @@ end;
 
 procedure TViewDashboard.FormDestroy(Sender: TObject);
 begin
+  if Assigned(FOpsDrones) then FOpsDrones.Free;
   FWaypoints.Free;
   FViewModel.Free;
   FCards.Free;
@@ -312,22 +316,25 @@ begin
       LDrone: TDroneDTO;
     begin
       FComboDrone.Items.Clear;
+      FComboDrone.Items.Add('(Selecione um drone)');
+
       if not Assigned(LList) then
       begin
-        FComboDrone.Items.Add('Erro ao carregar drones');
+        FComboDrone.Items[0] := 'Erro ao carregar drones';
         FComboDrone.ItemIndex := 0;
         Exit;
       end;
-      try
-        for LDrone in LList do
-          // Formato: "Nome | id | range"
-          FComboDrone.Items.Add(
-            Format('%s | %g Km', [LDrone.name, LDrone.max_range_km]));
-        if FComboDrone.Items.Count > 0 then
-          FComboDrone.ItemIndex := 0;
-      finally
-        LList.Free;
-      end;
+
+      // Substitui a lista de cache na memória da view
+      if Assigned(FOpsDrones) then FOpsDrones.Free;
+      FOpsDrones := LList;
+
+      // Alimenta a UI apenas com a apresentação limpa
+      for LDrone in FOpsDrones do
+        FComboDrone.Items.Add(Format('%s - %g Km', [LDrone.name, LDrone.max_range_km]));
+
+      if FComboDrone.Items.Count > 0 then
+        FComboDrone.ItemIndex := 0;
     end));
   end).Start;
 end;
@@ -653,6 +660,35 @@ begin
   FModalEditDist.SelectAll;
 end;
 
+procedure TViewDashboard.OnDroneComboChange(Sender: TObject);
+var
+  LIndex: Integer;
+  LSelected: TDroneDTO;
+begin
+  // Subtraímos 1 pois o item 0 da interface é '(Selecione um drone)'
+  LIndex := FComboDrone.ItemIndex - 1;
+
+  if (LIndex < 0) or not Assigned(FOpsDrones) or (LIndex >= FOpsDrones.Count) then
+  begin
+    FSelectedDroneId := '';
+    FSelectedDroneRange := 50.0;
+    Exit;
+  end;
+
+  LSelected := FOpsDrones[LIndex];
+  FSelectedDroneId := LSelected.id;
+  FSelectedDroneRange := LSelected.max_range_km;
+end;
+
+procedure TViewDashboard.EnviarRotaAoMapa(const AJsonPontos: string);
+begin
+  TThread.Synchronize(nil, procedure
+  begin
+    // O QuotedString é vital para que o JS receba uma string válida entre aspas
+    FWebMap.EvaluateJavaScript(Format('drawMission(%s)', [AJsonPontos.QuotedString]));
+  end);
+end;
+
 // ===========================================================================
 // MODULO: OPERACOES / MAPA
 // ===========================================================================
@@ -660,18 +696,157 @@ end;
 procedure TViewDashboard.BuildOpsView;
 var
   LPainelEsq: TRectangle;
+  LPanelBottom: TLayout;
   LLblTitle, LLblDroneTitle, LLblHintDrone: TLabel;
   LBtnAdd, LBtnCalc, LBtnClear: TCornerButton;
+  LSeparator: TRectangle;
+  LMapPath: string;
+  LHtmlContent: string;
 begin
-  { --- Painel esquerdo fixo de 280px --- }
+  if not Assigned(lytOps) then Exit;
+
+  { --- Painel esquerdo fixo --- }
   LPainelEsq := TRectangle.Create(lytOps);
   LPainelEsq.Parent := lytOps;
-  FLblMapStatus.Height := 28;
-  FLblMapStatus.Margins.Left := 12;
-  FLblMapStatus.Margins.Bottom := 4;
-  FLblMapStatus.TextSettings.WordWrap := True;
+  LPainelEsq.Align := TAlignLayout.Left;
+  LPainelEsq.Width := 290;
+  LPainelEsq.Fill.Color := COLOR_WHITE;
+  LPainelEsq.Stroke.Color := $FFEAECF0;
 
-  LBtnCalc := MakeButton(LPainelEsq, 'Calcular Rota');
+  { --- WebBrowser: mapa ocupa o restante --- }
+  FWebMap := TWebBrowser.Create(lytOps);
+  FWebMap.Parent := lytOps;
+  FWebMap.Align := TAlignLayout.Client;
+
+  // Força o FMX a usar o motor Chromium (Edge) em vez do Internet Explorer
+  {$IFDEF MSWINDOWS}
+  FWebMap.WindowsEngine := TWindowsEngine.EdgeIfAvailable;
+  {$ENDIF}
+
+  // Caminho absoluto para o arquivo físico
+  LMapPath := TPath.Combine(ExtractFilePath(ParamStr(0)), 'assets\mapa.html');
+
+  // Como o HTML agora é ES5 e à prova de falhas, voltamos a usar o Navigate.
+  // Isso permite que o Internet Explorer baixe os scripts externos (Leaflet CDN).
+  if TFile.Exists(LMapPath) then
+  begin
+    FWebMap.Navigate(LMapPath);
+  end
+  else
+  begin
+    FWebMap.LoadFromStrings(
+      '<html><body style="font-family:sans-serif; color:#DC2626; padding:20px;">' +
+      '<h3>Falha de Infraestrutura Visual</h3>' +
+      '<p>O arquivo do mapa nao foi copiado para o diretorio do executavel.</p>' +
+      '<p>Caminho esperado: <b>' + LMapPath + '</b></p>' +
+      '</body></html>', '');
+  end;
+
+  { --- Container Âncora de Rodapé --- }
+  LPanelBottom := TLayout.Create(LPainelEsq);
+  LPanelBottom.Parent := LPainelEsq;
+  LPanelBottom.Align := TAlignLayout.MostBottom;
+  LPanelBottom.Height := 120;
+  LPanelBottom.Position.Y := 9999;
+
+  { ======================================================= }
+  { ITENS DO TOPO (Mantendo sua lógica de Position.Y)       }
+  { ======================================================= }
+  LLblTitle := MakeLabel(LPainelEsq, 'Paradas da Missao', 15, COLOR_DARK, True);
+  LLblTitle.Position.Y := 0;
+  LLblTitle.Align := TAlignLayout.Top;
+  LLblTitle.Margins.Left := 16;
+  LLblTitle.Margins.Top := 16;
+  LLblTitle.Height := 30;
+
+  FEditWaypoint := MakeEdit(LPainelEsq, 'Endereco ou Lat, Lon');
+  FEditWaypoint.Position.Y := 38;
+  FEditWaypoint.Align := TAlignLayout.Top;
+  FEditWaypoint.Height := 40;
+  FEditWaypoint.Margins.Left := 12;
+  FEditWaypoint.Margins.Right := 12;
+  FEditWaypoint.Margins.Top := 8;
+  FEditWaypoint.OnChangeTracking := OnWaypointEditChange;
+
+  FAutocompleteList := TListBox.Create(LPainelEsq);
+  FAutocompleteList.Parent := LPainelEsq;
+  FAutocompleteList.Position.Y := 78;
+  FAutocompleteList.Align := TAlignLayout.Top;
+  FAutocompleteList.Height := 0;
+  FAutocompleteList.Margins.Left := 12;
+  FAutocompleteList.Margins.Right := 12;
+  FAutocompleteList.ItemHeight := 32;
+  FAutocompleteList.ShowScrollBars := False;
+  FAutocompleteList.OnItemClick := OnAutocompleteSelect;
+
+  FAutocompleteTimer := TTimer.Create(Self);
+  FAutocompleteTimer.Interval := 400;
+  FAutocompleteTimer.Enabled := False;
+  FAutocompleteTimer.OnTimer := OnAutocompleteTimer;
+
+  LBtnAdd := MakeButton(LPainelEsq, '+ Adicionar Parada');
+  LBtnAdd.Position.Y := 122;
+  LBtnAdd.Align := TAlignLayout.Top;
+  LBtnAdd.Height := 38;
+  LBtnAdd.Margins.Left := 12;
+  LBtnAdd.Margins.Right := 12;
+  LBtnAdd.Margins.Top := 6;
+  LBtnAdd.OnClick := OnAddWaypointClick;
+
+  FListBoxWaypoints := TLayout.Create(LPainelEsq);
+  FListBoxWaypoints.Parent := LPainelEsq;
+  FListBoxWaypoints.Position.Y := 160;
+  FListBoxWaypoints.Align := TAlignLayout.Top;
+  FListBoxWaypoints.Height := 0;
+  FListBoxWaypoints.Margins.Top := 4;
+
+  LSeparator := TRectangle.Create(LPainelEsq);
+  LSeparator.Parent := LPainelEsq;
+  LSeparator.Position.Y := 170;
+  LSeparator.Align := TAlignLayout.Top;
+  LSeparator.Height := 1;
+  LSeparator.Margins.Top := 8;
+  LSeparator.Fill.Color := $FFEAECF0;
+  LSeparator.Stroke.Kind := TBrushKind.None;
+
+  LLblDroneTitle := MakeLabel(LPainelEsq, 'Aeronave para a Missao', 13, COLOR_DARK, True);
+  LLblDroneTitle.Position.Y := 180;
+  LLblDroneTitle.Align := TAlignLayout.Top;
+  LLblDroneTitle.Margins.Left := 16;
+  LLblDroneTitle.Margins.Top := 12;
+  LLblDroneTitle.Height := 22;
+
+  LLblHintDrone := MakeLabel(LPainelEsq, 'Acesse o menu para carregar a lista.', 10, COLOR_MUTED);
+  LLblHintDrone.Position.Y := 190;
+  LLblHintDrone.Align := TAlignLayout.Top;
+  LLblHintDrone.Margins.Left := 16;
+  LLblHintDrone.Margins.Top := 2;
+  LLblHintDrone.Height := 16;
+
+  FComboDrone := TComboBox.Create(LPainelEsq);
+  FComboDrone.Parent := LPainelEsq;
+  FComboDrone.Position.Y := 200;
+  FComboDrone.Align := TAlignLayout.Top;
+  FComboDrone.Height := 38;
+  FComboDrone.Margins.Left := 12;
+  FComboDrone.Margins.Right := 12;
+  FComboDrone.Margins.Top := 6;
+  FComboDrone.Items.Add('(Selecione um drone)');
+  FComboDrone.ItemIndex := 0;
+  FComboDrone.OnChange := OnDroneComboChange; // Evento plugado conforme discutido
+
+  { ======================================================= }
+  { ITENS DO RODAPÉ (LPanelBottom)                          }
+  { ======================================================= }
+  LBtnClear := MakeButton(LPanelBottom, 'Limpar Rota');
+  LBtnClear.Align := TAlignLayout.Bottom;
+  LBtnClear.Height := 34;
+  LBtnClear.Margins.Left := 12;
+  LBtnClear.Margins.Right := 12;
+  LBtnClear.Margins.Bottom := 2;
+  LBtnClear.OnClick := OnClearRouteClick;
+
+  LBtnCalc := MakeButton(LPanelBottom, 'Calcular Rota');
   LBtnCalc.Align := TAlignLayout.Bottom;
   LBtnCalc.Height := 42;
   LBtnCalc.Margins.Left := 12;
@@ -680,19 +855,16 @@ begin
   LBtnCalc.Margins.Bottom := 4;
   LBtnCalc.OnClick := OnCalculateRouteClick;
 
-  LBtnClear := MakeButton(LPainelEsq, 'Limpar Rota');
-  LBtnClear.Align := TAlignLayout.Bottom;
-  LBtnClear.Height := 34;
-  LBtnClear.Margins.Left := 12;
-  LBtnClear.Margins.Right := 12;
-  LBtnClear.Margins.Bottom := 2;
-  LBtnClear.OnClick := OnClearRouteClick;
-
-  { --- WebBrowser: mapa ocupa o restante --- }
-  FWebMap := TWebBrowser.Create(lytOps);
-  FWebMap.Parent := lytOps;
-  FWebMap.Align := TAlignLayout.Client;
-  FWebMap.Navigate(ExtractFilePath(ParamStr(0)) + 'assets\mapa.html');
+  FLblMapStatus := TLabel.Create(LPanelBottom);
+  FLblMapStatus.Parent := LPanelBottom;
+  FLblMapStatus.Align := TAlignLayout.MostBottom;
+  FLblMapStatus.Text := 'Pronto.';
+  FLblMapStatus.Font.Size := 11;
+  FLblMapStatus.StyledSettings := FLblMapStatus.StyledSettings - [TStyledSetting.Size, TStyledSetting.FontColor, TStyledSetting.Style];
+  FLblMapStatus.TextSettings.FontColor := COLOR_MUTED;
+  FLblMapStatus.Height := 28;
+  FLblMapStatus.Margins.Left := 12;
+  FLblMapStatus.TextSettings.WordWrap := True;
 end;
 
 { Autocomplete: dispara timer a cada tecla }
@@ -822,25 +994,31 @@ end;
 
 procedure TViewDashboard.OnCalculateRouteClick(Sender: TObject);
 begin
-  if FWaypoints.Count = 0 then
+  if FSelectedDroneId.IsEmpty then
   begin
-    FLblMapStatus.Text := 'Adicione ao menos uma parada.';
+    ShowMessage('Por favor, selecione uma aeronave antes de calcular.');
     Exit;
   end;
-  if FSelectedDroneId = '' then
-  begin
-    FLblMapStatus.Text := 'Selecione uma aeronave.';
-    Exit;
-  end;
-  FLblMapStatus.Text := 'Simulando telemetria...';
-  RefreshMapRoute;
-  FLblMapStatus.Text := Format('Rota calculada. %d parada(s) + retorno ao HUB.', [FWaypoints.Count]);
+
+  FLblMapStatus.Text := 'Calculando rotas otimizadas...';
+
+  // Chamar o método da sua ViewModel que faz o POST para o servidor Horse
+  FViewModel.CalcularRota(FSelectedDroneId, FWaypoints,
+    procedure(AJsonResponse: string)
+    begin
+      // Quando a API responder, injetamos no Leaflet
+      EnviarRotaAoMapa(AJsonResponse);
+      FLblMapStatus.Text := 'Rota calculada com sucesso.';
+    end,
+    procedure(AError: string)
+    begin
+      FLblMapStatus.Text := 'Erro: ' + AError;
+    end
+  );
 end;
 
 // ===========================================================================
 // MÓDULO: CRUD / ESTAÇÃO
-// ===========================================================================
-// MODULO: CRUD / ESTACAO
 // ===========================================================================
 
 procedure TViewDashboard.BuildCrudView;

@@ -3,10 +3,14 @@
 interface
 
 uses
-  DroneDelivery.Client.Service.API, DroneDelivery.DTO.Drones,
-  System.Generics.Collections, System.JSON, System.SysUtils, REST.Json;
+  DroneDelivery.Client.Service.API, DroneDelivery.DTO.Drones, System.JSON,
+  System.Generics.Collections, System.SysUtils, REST.Json,
+  DroneDelivery.Client.Service.Maps;
 
 type
+  TProcSuccess = reference to procedure(AJson: string);
+  TProcError = reference to procedure(AMsg: string);
+
   TViewModelDashboard = class
   private
     FAPI: TServiceAPI;
@@ -17,11 +21,66 @@ type
     // Retorna uma lista real desserializada da API de Produçao
     function LoadDrones: TObjectList<TDroneDTO>;
     function CalcularPreco(const ADroneId: string; ADistanciaKm: Double): string;
+    procedure CalcularRota(const ADroneId: string; AWaypoints: TObjectList<TMapPoint>; 
+      OnSuccess: TProcSuccess; OnError: TProcError);
   end;
 
 implementation
 
+uses
+  RESTRequest4D;
+
 { TViewModelDashboard }
+
+procedure TViewModelDashboard.CalcularRota(const ADroneId: string;
+  AWaypoints: TObjectList<TMapPoint>; OnSuccess: TProcSuccess; OnError: TProcError);
+var
+  LBody: TJSONObject;
+  LArrayWaypoints: TJSONArray;
+  LPoint: TMapPoint;
+  LResponse: IResponse;
+begin
+  LBody := TJSONObject.Create;
+  LArrayWaypoints := TJSONArray.Create;
+  try
+    LBody.AddPair('drone_id', ADroneId);
+
+    // Converte a lista de waypoints para o JSON
+    if Assigned(AWaypoints) then
+    begin
+      for LPoint in AWaypoints do
+      begin
+        LArrayWaypoints.AddElement(TJSONObject.Create
+          .AddPair('lat', TJSONNumber.Create(LPoint.Lat))
+          .AddPair('lng', TJSONNumber.Create(LPoint.Lng))
+          .AddPair('label', LPoint.LabelName));
+      end;
+    end;
+    LBody.AddPair('waypoints', LArrayWaypoints);
+
+    LResponse := TRequest.New
+      .BaseURL('http://localhost:9000')
+      .Resource('rotas/calcular')
+      .AddBody(LBody)
+      .Accept('application/json')
+      .Post;
+
+    if LResponse.StatusCode = 200 then
+    begin
+      if Assigned(OnSuccess) then
+        OnSuccess(LResponse.Content);
+    end
+    else
+    begin
+      if Assigned(OnError) then
+        OnError(Format('Erro %d: %s', [LResponse.StatusCode, LResponse.StatusText]));
+    end;
+  finally
+    // No RESTRequest4Delphi, o LBody deve ser liberado manualmente se
+    // não for passado como owned. Mas para evitar leaks:
+    LBody.Free;
+  end;
+end;
 
 constructor TViewModelDashboard.Create;
 begin
