@@ -3,13 +3,13 @@
 {
   View Principal: Centro de Controle DroneLIVEry
   
-  MÃ³dulos:
-    - Frota de Drones  : Lista paginada de aeronaves com status e simulador de preÃ§o
-    - Rotas & LogÃ­stica: Mapa interativo (Leaflet/OSM), geocoding e simulaÃ§Ã£o de bateria
-    - EstaÃ§Ã£o & Frota  : CRUD de drones com catÃ¡logo de modelos e configuraÃ§Ã£o do Hangar
+  Módulos:
+    - Frota de Drones  : Lista paginada de aeronaves com status e simulador de preço
+    - Rotas & Logística: Mapa interativo (Leaflet/OSM), geocoding e simulação de bateria
+    - Estação & Frota  : CRUD de drones com catálogo de modelos e configuração do Hangar
   
-  PadrÃ£o de NavegaÃ§Ã£o: View-Switch por Layout visibility (sem TTabControl)
-  PadrÃ£o de ConcorrÃªncia: TThread.CreateAnonymousThread + TThread.Synchronize
+  Padrão de Navegação: View-Switch por Layout visibility (sem TTabControl)
+  Padrão de Concorrência: TThread.CreateAnonymousThread + TThread.Synchronize
 }
 
 interface
@@ -24,7 +24,7 @@ uses
   DroneDelivery.Client.Service.Maps;
 
 type
-  { Enum para identificar a visÃ£o ativa }
+  { Enum para identificar a visão ativa }
   TActiveView = (avFleet, avOps, avCrud);
 
   TViewDashboard = class(TForm)
@@ -55,7 +55,6 @@ type
     procedure MenuOpsClick(Sender: TObject);
     procedure MenuCrudClick(Sender: TObject);
     procedure OnLoadCatalogueClick(Sender: TObject);
-    procedure lblTitleClick(Sender: TObject);
 
   private
     { Estado }
@@ -67,21 +66,21 @@ type
     FSelectedDroneId: string;
     FSelectedDroneRange: Double;
 
-    { Componentes do Modal de PreÃ§o }
+    { Componentes do Modal de Preço }
     FModalOverlay: TRectangle;
     FModalPanel: TRectangle;
     FModalEditDist: TEdit;
     FModalLblResult: TLabel;
     FModalBtnConfirm, FModalBtnClose: TCornerButton;
 
-    { Componentes da tela de OperaÃ§Ãµes (Mapa) }
+    { Componentes da tela de Operações (Mapa) }
     FWebMap: TWebBrowser;
     FEditWaypoint: TEdit;
     FLblMapStatus: TLabel;
-    FListBoxWaypoints: TLayout;  // Container scrollÃ¡vel de waypoints adicionados
+    FListBoxWaypoints: TLayout;  // Container scrollável de waypoints adicionados
     FWaypointCount: Integer;
-    FComboDrone: TComboBox;      // Seletor de aeronave para a missÃ£o
-    FAutocompleteList: TListBox; // Dropdown de sugestÃµes de endereÃ§o
+    FComboDrone: TComboBox;      // Seletor de aeronave para a missão
+    FAutocompleteList: TListBox; // Dropdown de sugestões de endereço
     FAutocompleteTimer: TTimer;  // Debounce de 400ms antes de disparar Nominatim
 
     { Componentes da tela de CRUD }
@@ -95,19 +94,19 @@ type
     FEditHangarAddress: TEdit;
     FLblCrudStatus: TLabel;
 
-    { --- MÃ³dulo: Frota --- }
+    { --- Módulo: Frota --- }
     procedure BuildDroneCard(ADrone: TDroneDTO);
     procedure ClearDroneCards;
     procedure SetActiveView(AView: TActiveView);
     procedure UpdateMenuHighlight(AActive: TActiveView);
 
-    { --- MÃ³dulo: Modal de PreÃ§o (Frota) --- }
+    { --- Módulo: Modal de Preço (Frota) --- }
     procedure OnDroneActionClick(Sender: TObject);
     procedure ActionModalCloseClick(Sender: TObject);
     procedure ActionModalConfirmClick(Sender: TObject);
     procedure ActionModalKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
 
-    { --- MÃ³dulo: OperaÃ§Ãµes / Mapa --- }
+    { --- Módulo: Operações / Mapa --- }
     procedure BuildOpsView;
     procedure AddWaypointToMap(const AAddress: string; ALat, ALng: Double);
     procedure RefreshMapRoute;
@@ -115,10 +114,10 @@ type
     procedure OnClearRouteClick(Sender: TObject);
     procedure OnCalculateRouteClick(Sender: TObject);
     procedure OnWaypointEditChange(Sender: TObject);   // Dispara debounce para autocomplete
-    procedure OnAutocompleteTimer(Sender: TObject);    // Executado apÃ³s debounce
-    procedure OnAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem); // UsuÃ¡rio selecionou sugestÃ£o
+    procedure OnAutocompleteTimer(Sender: TObject);    // Executado após debounce
+    procedure OnAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem); // Usuário selecionou sugestão
 
-    { --- MÃ³dulo: CRUD / EstaÃ§Ã£o --- }
+    { --- Módulo: CRUD / Estação --- }
     procedure BuildCrudView;
     procedure LoadCatalogueAsync;
     procedure OnCatalogueModelClick(Sender: TObject);
@@ -194,7 +193,7 @@ begin
 end;
 
 // ===========================================================================
-// INICIALIZAÃ‡ÃƒO E CICLO DE VIDA
+// INICIALIZAÇÃO E CICLO DE VIDA
 // ===========================================================================
 
 procedure TViewDashboard.FormCreate(Sender: TObject);
@@ -202,16 +201,16 @@ begin
   FCards := TList<TRectangle>.Create;
   FViewModel := TViewModelDashboard.Create;
   FWaypoints := TObjectList<TMapPoint>.Create(True);
-  FHubLat := -23.5505;  // SP: PadrÃ£o atÃ© o usuÃ¡rio configurar o Hangar
+  FHubLat := -23.5505;  // SP: Padrão até o usuário configurar o Hangar
   FHubLng := -46.6333;
   FWaypointCount := 0;
-  FSelectedDroneRange := 50.0; // PadrÃ£o seguro
+  FSelectedDroneRange := 50.0; // Padrão seguro
 
-  // ConstrÃ³i as Views dos mÃ³dulos Ops e CRUD (uma Ãºnica vez)
+  // Constrói as Views dos módulos Ops e CRUD (uma única vez)
   BuildOpsView;
   BuildCrudView;
 
-  // Inicia na View de Frota com carregamento automÃ¡tico
+  // Inicia na View de Frota com carregamento automático
   SetActiveView(avFleet);
   btnRefreshClick(nil);
 end;
@@ -223,39 +222,34 @@ begin
   FCards.Free;
 end;
 
-procedure TViewDashboard.lblTitleClick(Sender: TObject);
-begin
-
-end;
-
 // ===========================================================================
-// NAVEGAÃ‡ÃƒO ENTRE MÃ“DULOS
+// NAVEGAÇÃO ENTRE MÓDULOS
 // ===========================================================================
 
 procedure TViewDashboard.SetActiveView(AView: TActiveView);
 begin
   FActiveView := AView;
 
-  // Controla visibilidade dos painÃ©is
+  // Controla visibilidade dos painéis
   ScrollDrones.Visible := (AView = avFleet);
   lytOps.Visible       := (AView = avOps);
   lytCrud.Visible      := (AView = avCrud);
 
-  // Atualiza tÃ­tulo do header e visibilidade do btnRefresh
+  // Atualiza título do header e visibilidade do btnRefresh
   case AView of
     avFleet:
     begin
-      lblTitle.Text := 'Drones DisponÃ­veis';
+      lblTitle.Text := 'Drones Disponíveis';
       btnRefresh.Visible := True;
     end;
     avOps:
     begin
-      lblTitle.Text := 'Rotas & LogÃ­stica';
+      lblTitle.Text := 'Rotas & Logística';
       btnRefresh.Visible := False;
     end;
     avCrud:
     begin
-      lblTitle.Text := 'EstaÃ§Ã£o & GestÃ£o de Frota';
+      lblTitle.Text := 'Estação & Gestão de Frota';
       btnRefresh.Visible := False;
     end;
   end;
@@ -344,7 +338,7 @@ begin
 end;
 
 // ===========================================================================
-// MÃ“DULO: FROTA DE DRONES
+// MÓDULO: FROTA DE DRONES
 // ===========================================================================
 
 procedure TViewDashboard.btnRefreshClick(Sender: TObject);
@@ -437,7 +431,7 @@ begin
   LInitials.TextSettings.HorzAlign := TTextAlign.Center;
   LInitials.TextSettings.VertAlign := TTextAlign.Center;
 
-  // Download assÃ­ncrono da imagem
+  // Download assíncrono da imagem
   if ADrone.image_url <> '' then
     TThread.CreateAnonymousThread(procedure
     var
@@ -459,7 +453,7 @@ begin
               LInitials.Visible := False;
             end));
         except
-          // Silencioso: placeholder de iniciais permanece visÃ­vel
+          // Silencioso: placeholder de iniciais permanece visível
         end;
       finally
         LStream.Free;
@@ -467,8 +461,8 @@ begin
       end;
     end).Start;
 
-  // BotÃ£o de aÃ§Ã£o
-  LBtnAction := MakeButton(LCard, 'Testar PreÃ§o');
+  // Botão de ação
+  LBtnAction := MakeButton(LCard, 'Testar Preço');
   LBtnAction.Align := TAlignLayout.Right;
   LBtnAction.Width := 130;
   LBtnAction.Margins.Top := 20;
@@ -507,7 +501,7 @@ begin
   LBadgeLabel.TextSettings.VertAlign := TTextAlign.Center;
 
   LLblSpec := MakeLabel(LLayoutText,
-    Format('%g Kg mÃ¡x. carga | Rende %g Km | Velocidade: %g Km/h',
+    Format('%g Kg máx. carga | Rende %g Km | Velocidade: %g Km/h',
       [ADrone.max_payload_kg, ADrone.max_range_km, ADrone.speed_kmh]),
     12, COLOR_MUTED);
   LLblSpec.Align := TAlignLayout.Bottom;
@@ -527,7 +521,7 @@ begin
 end;
 
 // ===========================================================================
-// MÃ“DULO: MODAL DE PREÃ‡O (Frota)
+// MÓDULO: MODAL DE PREÇO (Frota)
 // ===========================================================================
 
 procedure TViewDashboard.ActionModalCloseClick(Sender: TObject);
@@ -609,13 +603,13 @@ begin
   FModalPanel.XRadius := 12;
   FModalPanel.YRadius := 12;
 
-  LLblTitle := MakeLabel(FModalPanel, 'Simulador de PreÃ§o', 18, COLOR_DARK, True);
+  LLblTitle := MakeLabel(FModalPanel, 'Simulador de Preço', 18, COLOR_DARK, True);
   LLblTitle.Align := TAlignLayout.Top;
   LLblTitle.Margins.Top := 20;
   LLblTitle.Height := 30;
   LLblTitle.TextSettings.HorzAlign := TTextAlign.Center;
 
-  LLblSubtitle := MakeLabel(FModalPanel, 'DistÃ¢ncia atÃ© o destino (em Km):', 12, COLOR_MUTED);
+  LLblSubtitle := MakeLabel(FModalPanel, 'Distância até o destino (em Km):', 12, COLOR_MUTED);
   LLblSubtitle.Position.X := 20;
   LLblSubtitle.Position.Y := 60;
   LLblSubtitle.Width := 330;
@@ -672,97 +666,6 @@ begin
   { --- Painel esquerdo fixo de 280px --- }
   LPainelEsq := TRectangle.Create(lytOps);
   LPainelEsq.Parent := lytOps;
-  LPainelEsq.Align := TAlignLayout.Left;
-  LPainelEsq.Width := 290;
-  LPainelEsq.Fill.Color := COLOR_WHITE;
-  LPainelEsq.Stroke.Color := $FFEAECF0;
-
-  { --- Titulo --- }
-  LLblTitle := MakeLabel(LPainelEsq, 'Paradas da Missao', 15, COLOR_DARK, True);
-  LLblTitle.Align := TAlignLayout.Top;
-  LLblTitle.Margins.Left := 16;
-  LLblTitle.Margins.Top := 16;
-  LLblTitle.Height := 30;
-
-  { --- Campo de endereco com autocomplete --- }
-  FEditWaypoint := MakeEdit(LPainelEsq, 'Endereco ou Lat, Lon');
-  FEditWaypoint.Align := TAlignLayout.Top;
-  FEditWaypoint.Height := 40;
-  FEditWaypoint.Margins.Left := 12;
-  FEditWaypoint.Margins.Right := 12;
-  FEditWaypoint.Margins.Top := 8;
-  FEditWaypoint.OnChangeTracking := OnWaypointEditChange;
-
-  { --- Dropdown de autocomplete (inicialmente oculto) --- }
-  FAutocompleteList := TListBox.Create(LPainelEsq);
-  FAutocompleteList.Parent := LPainelEsq;
-  FAutocompleteList.Align := TAlignLayout.Top;
-  FAutocompleteList.Height := 0; // Oculto ate ter resultados
-  FAutocompleteList.Margins.Left := 12;
-  FAutocompleteList.Margins.Right := 12;
-  FAutocompleteList.ItemHeight := 32;
-  FAutocompleteList.ShowScrollBars := False;
-  FAutocompleteList.OnItemClick := OnAutocompleteSelect;
-
-  { --- Debounce Timer (400ms) --- }
-  FAutocompleteTimer := TTimer.Create(Self);
-  FAutocompleteTimer.Interval := 400;
-  FAutocompleteTimer.Enabled := False;
-  FAutocompleteTimer.OnTimer := OnAutocompleteTimer;
-
-  { --- Botao Adicionar Parada --- }
-  LBtnAdd := MakeButton(LPainelEsq, '+ Adicionar Parada');
-  LBtnAdd.Align := TAlignLayout.Top;
-  LBtnAdd.Height := 38;
-  LBtnAdd.Margins.Left := 12;
-  LBtnAdd.Margins.Right := 12;
-  LBtnAdd.Margins.Top := 6;
-  LBtnAdd.OnClick := OnAddWaypointClick;
-
-  { --- Lista das paradas adicionadas --- }
-  FListBoxWaypoints := TLayout.Create(LPainelEsq);
-  FListBoxWaypoints.Parent := LPainelEsq;
-  FListBoxWaypoints.Align := TAlignLayout.Top;
-  FListBoxWaypoints.Height := 0;
-  FListBoxWaypoints.Margins.Top := 4;
-
-  { --- Separador --- }
-  with TRectangle.Create(LPainelEsq) do
-  begin
-    Parent := LPainelEsq;
-    Align := TAlignLayout.Top;
-    Height := 1;
-    Margins.Top := 8;
-    Fill.Color := $FFEAECF0;
-    Stroke.Kind := TBrushKind.None;
-  end;
-
-  { --- Selecao de Aeronave --- }
-  LLblDroneTitle := MakeLabel(LPainelEsq, 'Aeronave para a Missao', 13, COLOR_DARK, True);
-  LLblDroneTitle.Align := TAlignLayout.Top;
-  LLblDroneTitle.Margins.Left := 16;
-  LLblDroneTitle.Margins.Top := 12;
-  LLblDroneTitle.Height := 22;
-
-  LLblHintDrone := MakeLabel(LPainelEsq, 'Acesse o menu para carregar a lista.', 10, COLOR_MUTED);
-  LLblHintDrone.Align := TAlignLayout.Top;
-  LLblHintDrone.Margins.Left := 16;
-  LLblHintDrone.Margins.Top := 2;
-  LLblHintDrone.Height := 16;
-
-  FComboDrone := TComboBox.Create(LPainelEsq);
-  FComboDrone.Parent := LPainelEsq;
-  FComboDrone.Align := TAlignLayout.Top;
-  FComboDrone.Height := 38;
-  FComboDrone.Margins.Left := 12;
-  FComboDrone.Margins.Right := 12;
-  FComboDrone.Margins.Top := 6;
-  FComboDrone.Items.Add('(Selecione um drone)');
-  FComboDrone.ItemIndex := 0;
-
-  { --- Status e Acoes no rodape --- }
-  FLblMapStatus := MakeLabel(LPainelEsq, 'Pronto.', 11, COLOR_MUTED);
-  FLblMapStatus.Align := TAlignLayout.Bottom;
   FLblMapStatus.Height := 28;
   FLblMapStatus.Margins.Left := 12;
   FLblMapStatus.Margins.Bottom := 4;
@@ -912,7 +815,7 @@ begin
   finally
     LHub.Free;
   end;
-  // Injeta via JS â€” usa AnsiQuotedStr com aspas simples para encapsular o JSON
+  // Injeta via JS — usa AnsiQuotedStr com aspas simples para encapsular o JSON
   FWebMap.EvaluateJavaScript(
     'drawMission(' + AnsiQuotedStr(LPayload, #39) + ')');
 end;
@@ -935,7 +838,7 @@ begin
 end;
 
 // ===========================================================================
-// MÃ“DULO: CRUD / ESTAÃ‡ÃƒO
+// MÓDULO: CRUD / ESTAÇÃO
 // ===========================================================================
 // MODULO: CRUD / ESTACAO
 // ===========================================================================
@@ -1106,9 +1009,9 @@ begin
               LParent: TControl;
             begin
               LAni.Free;
-              // Localiza o painel do catÃ¡logo (3o filho de lytCrud)
+              // Localiza o painel do catálogo (3o filho de lytCrud)
               LParent := lytCrud.Controls[1] as TControl; // LPainelCatalogue
-              // Remove botÃµes antigos (apÃ³s label + btn buscar = 2 filhos)
+              // Remove botões antigos (após label + btn buscar = 2 filhos)
               while LParent.ControlsCount > 3 do
                 LParent.Controls[LParent.ControlsCount - 1].Free;
 
@@ -1124,7 +1027,7 @@ begin
                 LBtn.TagString := LItem.ToJSON;
                 LBtn.OnClick := OnCatalogueModelClick;
               end;
-              FLblCrudStatus.Text  := 'CatÃ¡logo carregado com sucesso!';
+              FLblCrudStatus.Text  := 'Catálogo carregado com sucesso!';
               FLblCrudStatus.TextSettings.FontColor := COLOR_SUCCESS;
             end));
             LArr.Free;
@@ -1134,7 +1037,7 @@ begin
         on E: Exception do
           TThread.Synchronize(nil, TThreadProcedure(procedure begin
             LAni.Free;
-            FLblCrudStatus.Text  := 'Falha ao carregar catÃ¡logo: ' + E.Message;
+            FLblCrudStatus.Text  := 'Falha ao carregar catálogo: ' + E.Message;
             FLblCrudStatus.TextSettings.FontColor := COLOR_DANGER;
           end));
       end;
@@ -1211,7 +1114,7 @@ begin
         begin
           if LResp.StatusCode in [200, 201] then
           begin
-            FLblCrudStatus.Text := 'âœ… Drone salvo com sucesso!';
+            FLblCrudStatus.Text := '✅ Drone salvo com sucesso!';
             FLblCrudStatus.TextSettings.FontColor := COLOR_SUCCESS;
           end
           else
@@ -1223,7 +1126,7 @@ begin
       except
         on E: Exception do
           TThread.Synchronize(nil, TThreadProcedure(procedure begin
-            FLblCrudStatus.Text := 'Falha de conexÃ£o: ' + E.Message;
+            FLblCrudStatus.Text := 'Falha de conexão: ' + E.Message;
             FLblCrudStatus.TextSettings.FontColor := COLOR_DANGER;
           end));
       end;
@@ -1241,7 +1144,7 @@ begin
   LAddr := Trim(FEditHangarAddress.Text);
   if LAddr = '' then Exit;
 
-  FLblCrudStatus.Text := 'Geocodificando endereÃ§o do Hangar...';
+  FLblCrudStatus.Text := 'Geocodificando endereço do Hangar...';
   FLblCrudStatus.TextSettings.FontColor := COLOR_MUTED;
 
   TMapService.GeocodeAddressAsync(LAddr,
@@ -1254,7 +1157,7 @@ begin
     end,
     procedure(AMsg: string)
     begin
-      FLblCrudStatus.Text := 'EndereÃ§o nÃ£o encontrado: ' + AMsg;
+      FLblCrudStatus.Text := 'Endereço não encontrado: ' + AMsg;
       FLblCrudStatus.TextSettings.FontColor := COLOR_DANGER;
     end);
 end;
