@@ -1,4 +1,4 @@
-﻿unit DroneDelivery.Client.ViewModel.Dashboard;
+unit DroneDelivery.Client.ViewModel.Dashboard;
 
 interface
 
@@ -60,7 +60,7 @@ begin
 
     LResponse := TRequest.New
       .BaseURL('http://localhost:9000')
-      .Resource('rotas/calcular')
+      .Resource('routes/calculate')
       .AddBody(LBody)
       .Accept('application/json')
       .Post;
