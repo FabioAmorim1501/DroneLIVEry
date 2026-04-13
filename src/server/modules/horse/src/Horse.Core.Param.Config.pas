@@ -1,4 +1,4 @@
-unit Horse.Core.Param.Config;
+﻿unit Horse.Core.Param.Config;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

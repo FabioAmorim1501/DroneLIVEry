@@ -1,4 +1,4 @@
-unit Horse.Session;
+﻿unit Horse.Session;
 
 {$IF DEFINED(FPC)}
 {$MODE DELPHI}{$H+}

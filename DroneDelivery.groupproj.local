@@ -1,6 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
-  <Transactions/>
+  <Transactions>
+    <Transaction>2026/04/12 18:22:53.796,C:\projects\delphi\DroneLIVEry\DroneDelivery.groupproj=C:\projects\delphi\ProjectGroup1.groupproj</Transaction>
+  </Transactions>
   <Default.Personality>
     <Projects ActiveProject="C:\projects\delphi\DroneLIVEry\src\client\DroneDelivery.Client.dproj"/>
   </Default.Personality>

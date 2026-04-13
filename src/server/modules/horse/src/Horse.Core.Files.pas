@@ -1,4 +1,4 @@
-unit Horse.Core.Files;
+﻿unit Horse.Core.Files;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

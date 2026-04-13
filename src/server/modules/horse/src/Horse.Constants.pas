@@ -1,4 +1,4 @@
-unit Horse.Constants;
+﻿unit Horse.Constants;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

@@ -1,4 +1,4 @@
-unit Horse.Callback;
+﻿unit Horse.Callback;
 
 {$IF DEFINED(FPC)}
 {$MODE DELPHI}{$H+}

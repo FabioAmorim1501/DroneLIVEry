@@ -1,11 +1,248 @@
 object ViewDashboard: TViewDashboard
   Left = 0
   Top = 0
-  Caption = 'Drone Delivery Dashboard'
-  ClientHeight = 600
-  ClientWidth = 800
+  Caption = 'DroneLIVEry - Centro de Controle'
+  ClientHeight = 680
+  ClientWidth = 1100
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   DesignerMasterStyle = 0
+  object rctSidebar: TRectangle
+    Align = Left
+    Fill.Color = xFF1E1E2D
+    Size.Width = 220.000000000000000000
+    Size.Height = 680.000000000000000000
+    Size.PlatformDefault = False
+    Stroke.Kind = None
+    object lblLogo: TLabel
+      Align = Top
+      StyledSettings = [Family, Size, Style]
+      Margins.Left = 20.000000000000000000
+      Margins.Top = 30.000000000000000000
+      Margins.Right = 20.000000000000000000
+      Position.X = 20.000000000000000000
+      Position.Y = 30.000000000000000000
+      Size.Width = 180.000000000000000000
+      Size.Height = 35.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 20.000000000000000000
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+      TextSettings.FontColor = claWhite
+      TextSettings.WordWrap = False
+      Text = 'DroneLIVEry'
+    end
+    object lblMenuSectionFleet: TLabel
+      Align = Top
+      StyledSettings = [Family, Style]
+      Margins.Left = 20.000000000000000000
+      Margins.Top = 20.000000000000000000
+      Position.X = 20.000000000000000000
+      Position.Y = 85.000000000000000000
+      Size.Width = 200.000000000000000000
+      Size.Height = 18.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 10.000000000000000000
+      TextSettings.FontColor = xFF64748B
+      TextSettings.WordWrap = False
+      Text = 'FROTA'
+    end
+    object rctMenu1: TRectangle
+      Align = Top
+      Fill.Color = xFF2B2D42
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 5.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Position.X = 10.000000000000000000
+      Position.Y = 108.000000000000000000
+      Size.Width = 200.000000000000000000
+      Size.Height = 45.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      XRadius = 8.000000000000000000
+      YRadius = 8.000000000000000000
+      OnClick = MenuFleetClick
+      object lblMenu1: TLabel
+        Align = Client
+        StyledSettings = [Family, Size, Style]
+        Margins.Left = 15.000000000000000000
+        Size.Width = 185.000000000000000000
+        Size.Height = 45.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 14.000000000000000000
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.FontColor = claWhite
+        Text = 'Frota de Drones'
+      end
+    end
+    object lblMenuSectionOps: TLabel
+      Align = Top
+      StyledSettings = [Family, Style]
+      Margins.Left = 20.000000000000000000
+      Margins.Top = 15.000000000000000000
+      Position.X = 20.000000000000000000
+      Position.Y = 168.000000000000000000
+      Size.Width = 200.000000000000000000
+      Size.Height = 18.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 10.000000000000000000
+      TextSettings.FontColor = xFF64748B
+      TextSettings.WordWrap = False
+      Text = 'OPERACOES'
+    end
+    object rctMenu2: TRectangle
+      Align = Top
+      Fill.Color = xFF1E1E2D
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 5.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Position.X = 10.000000000000000000
+      Position.Y = 191.000000000000000000
+      Size.Width = 200.000000000000000000
+      Size.Height = 45.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      XRadius = 8.000000000000000000
+      YRadius = 8.000000000000000000
+      OnClick = MenuOpsClick
+      object lblMenu2: TLabel
+        Align = Client
+        StyledSettings = [Family, Size, Style]
+        Margins.Left = 15.000000000000000000
+        Size.Width = 185.000000000000000000
+        Size.Height = 45.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 14.000000000000000000
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.FontColor = xFF94A3B8
+        Text = 'Rotas e Log'#237'stica'
+      end
+    end
+    object lblMenuSectionAdmin: TLabel
+      Align = Top
+      StyledSettings = [Family, Style]
+      Margins.Left = 20.000000000000000000
+      Margins.Top = 15.000000000000000000
+      Position.X = 20.000000000000000000
+      Position.Y = 251.000000000000000000
+      Size.Width = 200.000000000000000000
+      Size.Height = 18.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 10.000000000000000000
+      TextSettings.FontColor = xFF64748B
+      TextSettings.WordWrap = False
+      Text = 'ADMINISTRACAO'
+    end
+    object rctMenu3: TRectangle
+      Align = Top
+      Fill.Color = xFF1E1E2D
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 5.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Position.X = 10.000000000000000000
+      Position.Y = 274.000000000000000000
+      Size.Width = 200.000000000000000000
+      Size.Height = 45.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      XRadius = 8.000000000000000000
+      YRadius = 8.000000000000000000
+      OnClick = MenuCrudClick
+      object lblMenu3: TLabel
+        Align = Client
+        StyledSettings = [Family, Size, Style]
+        Margins.Left = 15.000000000000000000
+        Size.Width = 185.000000000000000000
+        Size.Height = 45.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 14.000000000000000000
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.FontColor = xFF94A3B8
+        Text = 'Esta'#231#227'o e Frota'
+      end
+    end
+  end
+  object rctBackground: TRectangle
+    Align = Client
+    Fill.Color = xFFF3F4F6
+    Size.Width = 880.000000000000000000
+    Size.Height = 680.000000000000000000
+    Size.PlatformDefault = False
+    Stroke.Kind = None
+    object rctHeader: TRectangle
+      Align = Top
+      Fill.Color = claWhite
+      Size.Width = 880.000000000000000000
+      Size.Height = 70.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+      object lblTitle: TLabel
+        Align = Left
+        Margins.Left = 30.000000000000000000
+        Position.X = 30.000000000000000000
+        Size.Width = 480.000000000000000000
+        Size.Height = 70.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 22.000000000000000000
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.FontColor = xFF101828
+        Text = 'Drones Dispon'#237'veis'
+        OnClick = lblTitleClick
+      end
+      object btnRefresh: TCornerButton
+        Align = Right
+        Margins.Top = 15.000000000000000000
+        Margins.Right = 30.000000000000000000
+        Margins.Bottom = 15.000000000000000000
+        Position.X = 720.000000000000000000
+        Position.Y = 15.000000000000000000
+        Sides = [Top, Left, Bottom, Right]
+        Size.Width = 130.000000000000000000
+        Size.Height = 40.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Atualizar'
+        TextSettings.Trimming = None
+        XRadius = 6.000000000000000000
+        YRadius = 6.000000000000000000
+        OnClick = btnRefreshClick
+      end
+    end
+    object rctSeparator: TRectangle
+      Align = Top
+      Fill.Color = xFFEAECF0
+      Position.Y = 70.000000000000000000
+      Size.Width = 880.000000000000000000
+      Size.Height = 1.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Kind = None
+    end
+    object ScrollDrones: TVertScrollBox
+      Align = Client
+      Margins.Left = 20.000000000000000000
+      Margins.Top = 20.000000000000000000
+      Margins.Right = 20.000000000000000000
+      Margins.Bottom = 20.000000000000000000
+      Size.Width = 840.000000000000000000
+      Size.Height = 569.000000000000000000
+      Size.PlatformDefault = False
+      Viewport.Width = 840.000000000000000000
+      Viewport.Height = 569.000000000000000000
+    end
+    object lytOps: TLayout
+      Align = Client
+      Size.Width = 880.000000000000000000
+      Size.Height = 570.000000000000000000
+      Size.PlatformDefault = False
+      Visible = False
+    end
+    object lytCrud: TLayout
+      Align = Client
+      Size.Width = 880.000000000000000000
+      Size.Height = 570.000000000000000000
+      Size.PlatformDefault = False
+      Visible = False
+    end
+  end
 end

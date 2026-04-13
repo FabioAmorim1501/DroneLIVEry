@@ -1,4 +1,4 @@
-unit Horse.Rtti.Helper;
+﻿unit Horse.Rtti.Helper;
 
 interface
 

@@ -10,11 +10,13 @@ CREATE TABLE locais (
 );
 
 CREATE TABLE drones (
-    id SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    payload_maximo DOUBLE PRECISION NOT NULL, -- Capacidade de Peso (Kg)
-    autonomia_km DOUBLE PRECISION NOT NULL,   -- Bateria/Distância (Km)
-    velocidade_kmh DOUBLE PRECISION NOT NULL  -- Velocidade (Km/h)
+    id VARCHAR(50) PRIMARY KEY, -- MongoDB style ID from external API
+    name VARCHAR(100) NOT NULL,
+    max_payload_kg DOUBLE PRECISION NOT NULL,
+    max_range_km DOUBLE PRECISION NOT NULL, 
+    battery_wh DOUBLE PRECISION NOT NULL,
+    speed_kmh DOUBLE PRECISION NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'available' -- available, in_flight, maintenance
 );
 
 CREATE TABLE pedidos (
@@ -28,7 +30,7 @@ CREATE TABLE pedidos (
 CREATE TABLE rotas_paradas (
     id SERIAL PRIMARY KEY,
     pedido_id INTEGER NOT NULL REFERENCES pedidos(id),
-    drone_id INTEGER NOT NULL REFERENCES drones(id),
+    drone_id VARCHAR(50) NOT NULL REFERENCES drones(id),
     local_id INTEGER NOT NULL REFERENCES locais(id),
     ordem INTEGER NOT NULL,
     distancia_percorrida DOUBLE PRECISION NOT NULL

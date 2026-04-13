@@ -1,4 +1,4 @@
-unit Horse.Provider.FPC.Daemon;
+﻿unit Horse.Provider.FPC.Daemon;
 
 {$IF DEFINED(FPC)}
 {$MODE DELPHI}{$H+}

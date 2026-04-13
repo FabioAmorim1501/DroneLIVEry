@@ -1,4 +1,4 @@
-unit Tests.Horse.Core.Files;
+﻿unit Tests.Horse.Core.Files;
 
 interface
 

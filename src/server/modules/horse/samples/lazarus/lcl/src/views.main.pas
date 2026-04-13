@@ -1,4 +1,4 @@
-unit Views.Main;
+﻿unit Views.Main;
 
 {$MODE DELPHI}{$H+}
 

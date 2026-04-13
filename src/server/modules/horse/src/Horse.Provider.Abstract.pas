@@ -1,4 +1,4 @@
-unit Horse.Provider.Abstract;
+﻿unit Horse.Provider.Abstract;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

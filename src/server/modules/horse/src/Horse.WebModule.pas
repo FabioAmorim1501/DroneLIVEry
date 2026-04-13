@@ -1,4 +1,4 @@
-unit Horse.WebModule;
+﻿unit Horse.WebModule;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

@@ -1,4 +1,4 @@
-unit Tests.Horse.Core.Param;
+﻿unit Tests.Horse.Core.Param;
 
 interface
 

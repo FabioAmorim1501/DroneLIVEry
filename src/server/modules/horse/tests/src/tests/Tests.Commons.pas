@@ -1,4 +1,4 @@
-unit Tests.Commons;
+﻿unit Tests.Commons;
 
 interface
 

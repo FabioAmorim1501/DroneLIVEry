@@ -1,4 +1,4 @@
-unit DroneDelivery.Domain.Entities;
+﻿unit DroneDelivery.Domain.Entities;
 
 interface
 

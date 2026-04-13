@@ -1,4 +1,4 @@
-unit Horse;
+﻿unit Horse;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

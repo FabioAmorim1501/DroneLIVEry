@@ -1,4 +1,4 @@
-unit Horse.Core.RouterTree.NextCaller;
+﻿unit Horse.Core.RouterTree.NextCaller;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

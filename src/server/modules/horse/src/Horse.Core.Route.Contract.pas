@@ -1,4 +1,4 @@
-unit Horse.Core.Route.Contract;
+﻿unit Horse.Core.Route.Contract;
 
 {$IF DEFINED(FPC)}
 {$MODE DELPHI}{$H+}

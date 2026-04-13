@@ -1,4 +1,4 @@
-unit Horse.Provider.CGI;
+﻿unit Horse.Provider.CGI;
 
 interface
 

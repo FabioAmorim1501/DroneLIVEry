@@ -1,4 +1,4 @@
-unit Horse.Provider.VCL;
+﻿unit Horse.Provider.VCL;
 
 interface
 

@@ -1,4 +1,4 @@
-unit Horse.Provider.IOHandleSSL;
+﻿unit Horse.Provider.IOHandleSSL;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

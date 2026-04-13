@@ -1,4 +1,4 @@
-unit Tests.Api.Vcl;
+﻿unit Tests.Api.Vcl;
 
 interface
 

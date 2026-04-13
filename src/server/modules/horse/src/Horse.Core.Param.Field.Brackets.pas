@@ -1,4 +1,4 @@
-unit Horse.Core.Param.Field.Brackets;
+﻿unit Horse.Core.Param.Field.Brackets;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

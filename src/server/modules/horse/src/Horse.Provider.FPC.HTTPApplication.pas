@@ -1,4 +1,4 @@
-unit Horse.Provider.FPC.HTTPApplication;
+﻿unit Horse.Provider.FPC.HTTPApplication;
 
 {$IF DEFINED(FPC)}
 {$MODE DELPHI}{$H+}

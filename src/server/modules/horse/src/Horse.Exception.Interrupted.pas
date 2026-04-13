@@ -1,4 +1,4 @@
-unit Horse.Exception.Interrupted;
+﻿unit Horse.Exception.Interrupted;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

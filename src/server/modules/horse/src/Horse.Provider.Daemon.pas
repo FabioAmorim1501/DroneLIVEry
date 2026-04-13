@@ -1,4 +1,4 @@
-unit Horse.Provider.Daemon;
+﻿unit Horse.Provider.Daemon;
 
 interface
 

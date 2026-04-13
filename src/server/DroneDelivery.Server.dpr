@@ -9,6 +9,7 @@ uses
   Horse.Jhonson, // Equivalente moderno ao JHose (JSON middleware para Horse)
   DataSet.Serialize,
   DroneDelivery.Server.Controller.Drones in 'Controllers\DroneDelivery.Server.Controller.Drones.pas',
+  DroneDelivery.Server.Controller.Catalogue in 'Controllers\DroneDelivery.Server.Controller.Catalogue.pas',
   DroneDelivery.Server.Controller.Rotas in 'Controllers\DroneDelivery.Server.Controller.Rotas.pas',
   DroneDelivery.Server.Service.Rotas in 'Services\DroneDelivery.Server.Service.Rotas.pas',
   DroneDelivery.Server.Repository.Drone in 'Repositories\DroneDelivery.Server.Repository.Drone.pas',
@@ -20,6 +21,8 @@ begin
   THorse.Use(Jhonson());
 
   // Registrar Controllers / Endpoints
+  // IMPORTANTE: /catalogue deve ser registrado ANTES de /drones/:drone_id
+  DroneDelivery.Server.Controller.Catalogue.Registry;
   DroneDelivery.Server.Controller.Drones.Registry;
   DroneDelivery.Server.Controller.Rotas.Registry;
 

@@ -1,4 +1,4 @@
-unit Horse.Exception;
+﻿unit Horse.Exception;
 
 {$IF DEFINED(FPC)}
   {$MODE DELPHI}{$H+}

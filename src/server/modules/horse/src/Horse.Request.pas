@@ -1,4 +1,4 @@
-unit Horse.Request;
+﻿unit Horse.Request;
 
 {$IF DEFINED(FPC)}
 {$MODE DELPHI}{$H+}

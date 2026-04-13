@@ -1,4 +1,4 @@
-unit DaemonManager;
+﻿unit DaemonManager;
 
 {$mode objfpc}{$H+}
 

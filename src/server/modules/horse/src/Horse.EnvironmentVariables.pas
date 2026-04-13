@@ -1,4 +1,4 @@
-unit Horse.EnvironmentVariables;
+﻿unit Horse.EnvironmentVariables;
 
 interface
 

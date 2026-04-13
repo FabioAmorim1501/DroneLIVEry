@@ -1,4 +1,4 @@
-unit Horse.Provider.FPC.FastCGI;
+﻿unit Horse.Provider.FPC.FastCGI;
 
 {$IF DEFINED(FPC)}
 {$MODE DELPHI}{$H+}

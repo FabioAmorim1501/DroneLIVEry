@@ -1,4 +1,4 @@
-unit Horse.Provider.Apache;
+﻿unit Horse.Provider.Apache;
 
 interface
 
