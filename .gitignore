@@ -19,7 +19,9 @@ __recovery/
 *.rsm
 *.skincfg
 
-# Diretórios de saída de compilação por plataforma
+# Diretórios de saída de compilação customizados e por plataforma
+bin/
+dcu/
 Win32/
 Win64/
 Android/
@@ -42,6 +44,9 @@ Linux64/
 # Ignorar diretórios `.vscode` ou `.idea` caso use outros editores
 .vscode/
 .idea/
+
+# Bibliotecas de Terceiros e Gerenciador de Pacotes Boss
+modules/
 
 # Ignorar o diretório das ferramentas do AI (se houver logs gerados no projeto)
 scratch/
