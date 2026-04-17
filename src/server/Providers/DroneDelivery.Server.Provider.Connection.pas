@@ -1,4 +1,4 @@
-﻿unit DroneDelivery.Server.Provider.Connection;
+unit DroneDelivery.Server.Provider.Connection;
 
 interface
 
@@ -6,7 +6,7 @@ uses
   FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf,
   FireDAC.Phys.Intf, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async,
   FireDAC.Phys, FireDAC.Phys.PG, FireDAC.Phys.PGDef, FireDAC.ConsoleUI.Wait,
-  Data.DB, FireDAC.Comp.Client, System.SysUtils;
+  Data.DB, FireDAC.Comp.Client, System.SysUtils, FireDAC.DApt;
 
 type
   TProviderConnection = class

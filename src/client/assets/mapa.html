@@ -37,9 +37,8 @@
         function drawMission(pointsJson) {
             var points = JSON.parse(pointsJson);
             
-            // clear old
-            markers.forEach(m => map.removeLayer(m));
-            polylines.forEach(p => map.removeLayer(p));
+            markers.forEach(function(m) { map.removeLayer(m); });
+            polylines.forEach(function(p) { map.removeLayer(p); });
             markers = [];
             polylines = [];
             
@@ -47,7 +46,7 @@
 
             var latLngs = [];
             
-            points.forEach((p, index) => {
+            points.forEach(function(p, index) {
                 var latLng = [p.lat, p.lng];
                 latLngs.push(latLng);
                 
@@ -56,7 +55,7 @@
                 if (p.battery < 40 && p.battery >= 20) batClass = 'bat-warn';
                 if (p.battery < 20) batClass = 'bat-danger';
 
-                var batStr = p.battery !== null ? `<span class="${batClass}">🔋 Bateria: ${p.battery.toFixed(1)}%</span>` : '';
+                var batStr = p.battery !== null ? '<span class="' + batClass + '">🔋 Bateria: ' + p.battery.toFixed(1) + '%</span>' : '';
                 var isHub = (index === 0 || index === points.length - 1);
                 var iconUrl = isHub ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png' : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
 
@@ -70,7 +69,7 @@
                 });
 
                 var marker = L.marker(latLng, {icon: colorIcon}).addTo(map);
-                marker.bindPopup(`<div class="drone-popup"><b>${p.label}</b>${batStr}</div>`);
+                marker.bindPopup('<div class="drone-popup"><b>' + p.label + '</b>' + batStr + '</div>');
                 if(index === points.length - 1) marker.openPopup(); // Open last (usually hub return)
                 markers.push(marker);
             });

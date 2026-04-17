@@ -101,8 +101,9 @@
     <File Path="Views"/>
     <File Path="Views\DroneDelivery.Client.View.Dashboard.pas"/>
     <File Path="Views\DroneDelivery.Client.View.Dashboard.fmx"/>
-  </ProjectSortOrder>  <Transactions>
-    <Transaction>2026/04/13 03:30:20.261,=C:\projects\delphi\DroneLIVEry\src\common\DroneDelivery.DTO.Locais.pas</Transaction>
-    <Transaction>2026/04/13 03:31:09.010,C:\projects\delphi\DroneLIVEry\src\common\DroneDelivery.DTO.Locais.pas=</Transaction>
+  </ProjectSortOrder>
+	<Transactions>
+    <Transaction>2026/04/13 03:30:20.000.261,=C:\projects\delphi\DroneLIVEry\src\common\DroneDelivery.DTO.Locais.pas</Transaction>
+    <Transaction>2026/04/13 03:31:09.000.010,C:\projects\delphi\DroneLIVEry\src\common\DroneDelivery.DTO.Locais.pas=</Transaction>
   </Transactions>
 </BorlandProject>

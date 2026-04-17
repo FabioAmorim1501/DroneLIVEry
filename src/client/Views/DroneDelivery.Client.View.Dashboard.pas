@@ -203,6 +203,19 @@ begin
   BuildOpsView;
   BuildCrudView;
 
+  // Carrega Hub Database Assincronamente
+  TThread.CreateAnonymousThread(procedure
+  var
+    LName: string; LLat, LLng: Double;
+  begin
+    if FViewModel.GetHangar(LName, LLat, LLng) then
+      TThread.Synchronize(nil, procedure
+      begin
+        FHubLat := LLat; FHubLng := LLng;
+        if Assigned(FEditHangarAddress) then FEditHangarAddress.Text := LName;
+      end);
+  end).Start;
+
   SetActiveView(avFleet);
   btnRefreshClick(nil);
 end;
@@ -223,6 +236,7 @@ begin
   ScrollDrones.Visible := False;
   lytOps.Visible := False;
   lytCrud.Visible := False;
+  if Assigned(FWebMap) then FWebMap.Visible := False; // Esconde a sub-janela nativa
 
   case AView of
     avFleet: 
@@ -239,7 +253,12 @@ begin
       lytOps.Visible := True;
       lytOps.BringToFront;
       // Repaint apenas se o mapa já estiver carregado e pronto
-      if Assigned(FWebMap) then FWebMap.Repaint;
+      if Assigned(FWebMap) then 
+      begin
+        FWebMap.Visible := True;
+        FWebMap.BringToFront;
+        FWebMap.Repaint;
+      end;
     end;
     avCrud:  
     begin 
@@ -741,6 +760,34 @@ procedure TViewDashboard.OnLoadCatalogueClick(Sender: TObject); begin LoadCatalo
 procedure TViewDashboard.LoadCatalogueAsync; begin { Implementação async de catálogo } end;
 procedure TViewDashboard.OnCatalogueModelClick(Sender: TObject); begin end;
 procedure TViewDashboard.OnSaveDroneClick(Sender: TObject); begin end;
-procedure TViewDashboard.OnSaveHangarClick(Sender: TObject); begin end;
+procedure TViewDashboard.OnSaveHangarClick(Sender: TObject);
+var LAddr: string;
+begin
+  LAddr := FEditHangarAddress.Text.Trim;
+  if LAddr.IsEmpty then Exit;
+  
+  TMapService.GeocodeAddressAsync(LAddr,
+    procedure(Lat, Lng: Double)
+    begin
+      TThread.CreateAnonymousThread(procedure
+      begin
+        if FViewModel.GravarHangar(LAddr, Lat, Lng) then
+        begin
+          TThread.Synchronize(nil, procedure
+          begin
+            FHubLat := Lat; FHubLng := Lng;
+            ShowMessage('Endereço do CD Base atualizado com Sucesso no PostgreSQL!');
+          end);
+        end
+        else
+          TThread.Synchronize(nil, procedure begin ShowMessage('Erro ao comunicar com o Backend.'); end);
+      end).Start;
+    end,
+    procedure(E: string)
+    begin
+      ShowMessage('Local não encontrado no mapa global. Tente ser mais específico. Erro: ' + E);
+    end
+  );
+end;
 
 end.

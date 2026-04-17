@@ -1,4 +1,4 @@
-﻿unit DroneDelivery.Server.Service.Rotas;
+unit DroneDelivery.Server.Service.Rotas;
 
 interface
 
@@ -45,7 +45,7 @@ var
 begin
   Result := nil;
   for LLocal in ALocais do
-    if LLocal.Id = AId then
+    if LLocal.Id = AId.ToString then
       Exit(LLocal);
 end;
 
@@ -141,7 +141,7 @@ begin
         // Registo tático da parada
         LArrayParadas.AddElement(TJSONObject.Create
           .AddPair('pedido_id', TJSONNumber.Create(LPedidoMaisProximo.Id))
-          .AddPair('local_id', TJSONNumber.Create(LLocalDestino.Id))
+          .AddPair('local_id', LLocalDestino.Id)
           .AddPair('nome_cliente', LLocalDestino.Nome)
           .AddPair('lat', TJSONNumber.Create(LLocalDestino.Latitude))
           .AddPair('lng', TJSONNumber.Create(LLocalDestino.Longitude))
@@ -154,7 +154,7 @@ begin
         LDistanciaPercorrida := LDistanciaPercorrida + CalcularDistanciaKm(LCurrentLat, LCurrentLng, LLocalHub.Latitude, LLocalHub.Longitude);
 
         LObjRota := TJSONObject.Create;
-        LObjRota.AddPair('drone_id', TJSONNumber.Create(LDrone.Id));
+        LObjRota.AddPair('drone_id', LDrone.Id);
         LObjRota.AddPair('drone_nome', LDrone.Nome);
         LObjRota.AddPair('payload_utilizado_kg', TJSONNumber.Create(LCargaAtual));
         LObjRota.AddPair('distancia_total_km', TJSONNumber.Create(LDistanciaPercorrida));

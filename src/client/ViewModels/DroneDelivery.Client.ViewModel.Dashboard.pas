@@ -23,6 +23,10 @@ type
     function CalcularPreco(const ADroneId: string; ADistanciaKm: Double): string;
     procedure CalcularRota(const ADroneId: string; AWaypoints: TObjectList<TMapPoint>; 
       OnSuccess: TProcSuccess; OnError: TProcError);
+      
+    // Hub (CD) Methods
+    function GetHangar(out AName: string; out ALat, ALng: Double): Boolean;
+    function GravarHangar(const AName: string; ALat, ALng: Double): Boolean;
   end;
 
 implementation
@@ -31,6 +35,65 @@ uses
   RESTRequest4D;
 
 { TViewModelDashboard }
+
+function TViewModelDashboard.GetHangar(out AName: string; out ALat, ALng: Double): Boolean;
+var
+  LResponse: IResponse;
+  LJson: TJSONObject;
+begin
+  Result := False;
+  AName := ''; ALat := 0; ALng := 0;
+  try
+    LResponse := TRequest.New
+      .BaseURL('http://localhost:9000')
+      .Resource('locations/hangar')
+      .Accept('application/json')
+      .Get;
+
+    if LResponse.StatusCode = 200 then
+    begin
+      LJson := TJSONObject.ParseJSONValue(LResponse.Content) as TJSONObject;
+      if Assigned(LJson) then
+      begin
+        try
+          if Assigned(LJson.GetValue('name')) then AName := LJson.GetValue('name').Value;
+          if Assigned(LJson.GetValue('latitude')) then ALat := (LJson.GetValue('latitude') as TJSONNumber).AsDouble;
+          if Assigned(LJson.GetValue('longitude')) then ALng := (LJson.GetValue('longitude') as TJSONNumber).AsDouble;
+          Result := True;
+        finally
+          LJson.Free;
+        end;
+      end;
+    end;
+  except
+    // Falha silenciosa pra rede fora do ar (Usa Fallback da Praça da Sé original)
+  end;
+end;
+
+function TViewModelDashboard.GravarHangar(const AName: string; ALat, ALng: Double): Boolean;
+var
+  LBody: TJSONObject;
+  LResponse: IResponse;
+begin
+  Result := False;
+  LBody := TJSONObject.Create;
+  try
+    LBody.AddPair('name', AName);
+    LBody.AddPair('latitude', TJSONNumber.Create(ALat));
+    LBody.AddPair('longitude', TJSONNumber.Create(ALng));
+
+    LResponse := TRequest.New
+      .BaseURL('http://localhost:9000')
+      .Resource('locations/hangar')
+      .AddBody(LBody)
+      .Accept('application/json')
+      .Put;
+
+    Result := LResponse.StatusCode = 200;
+  finally
+    LBody.Free;
+  end;
+end;
 
 procedure TViewModelDashboard.CalcularRota(const ADroneId: string;
   AWaypoints: TObjectList<TMapPoint>; OnSuccess: TProcSuccess; OnError: TProcError);
@@ -104,11 +167,12 @@ begin
     if Assigned(LJsonObj) then
     begin
       try
-        // Extrai a resposta tratada, não importa qual o Status Code
         if Assigned(LJsonObj.GetValue('error')) then
           Exit(LJsonObj.GetValue('error').Value); 
           
-        if Assigned(LJsonObj.GetValue('delivery_price_brl')) then
+        if Assigned(LJsonObj.GetValue('estimated_price')) then
+          Result := Format('Custo Calculado: R$ %s', [LJsonObj.GetValue('estimated_price').Value])
+        else if Assigned(LJsonObj.GetValue('delivery_price_brl')) then
           Result := Format('Custo Calculado: R$ %s', [LJsonObj.GetValue('delivery_price_brl').Value])
         else
           Result := 'Retorno desconhecido da API.';
@@ -130,7 +194,7 @@ var
   LJsonVal: TJSONValue;
   LDrone: TDroneDTO;
 begin
-  Result := TObjectList<TDroneDTO>.Create(True); // A View consome e ns doamos a lista ou Owns objects
+  Result := TObjectList<TDroneDTO>.Create(True);
   try
     LJsonString := FAPI.GetDrones;
     
@@ -154,7 +218,6 @@ begin
   except
     on E: Exception do
     begin
-      // Se houver Timeout ou falta de DLL OpenSSL HTTP, devolve nulo graciosamente
       Result.Free;
       Result := nil;
     end;
