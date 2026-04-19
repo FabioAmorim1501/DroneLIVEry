@@ -48,5 +48,12 @@ Linux64/
 # Bibliotecas de Terceiros e Gerenciador de Pacotes Boss
 modules/
 
+# Senhas e Arquivos de Configuração de Ambiente
+*.ini
+!*.ini.example
+
+# Lixo Dinâmico de Compilação de Recursos do Delphi
+*.otares
+
 # Ignorar o diretório das ferramentas do AI (se houver logs gerados no projeto)
 scratch/
