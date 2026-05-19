@@ -45,36 +45,47 @@ var
   LLocal: TLocalEntity;
   LBody: TJSONObject;
 begin
-  LBody := Req.Body<TJSONObject>;
-  if not Assigned(LBody) then begin Res.Status(400); Exit; end;
-  
-  LRepo := TRepositoryLocation.Create;
   try
-    LLocal := LRepo.GetById('base_hangar_01');
-    if not Assigned(LLocal) then
-    begin
-      // Se por algum motivo deletaram do BD, recria automático
-      LLocal := TLocalEntity.Create;
-      LLocal.Id := 'base_hangar_01';
-      LLocal.Tipo := ltBase;
-      
-      if Assigned(LBody.GetValue('name')) then LLocal.Nome := LBody.GetValue('name').Value;
-      if Assigned(LBody.GetValue('latitude')) then LLocal.Latitude := (LBody.GetValue('latitude') as TJSONNumber).AsDouble;
-      if Assigned(LBody.GetValue('longitude')) then LLocal.Longitude := (LBody.GetValue('longitude') as TJSONNumber).AsDouble;
-      LRepo.Insert(LLocal);
-    end
-    else
-    begin
-      // Atualiza normal
-      if Assigned(LBody.GetValue('name')) then LLocal.Nome := LBody.GetValue('name').Value;
-      if Assigned(LBody.GetValue('latitude')) then LLocal.Latitude := (LBody.GetValue('latitude') as TJSONNumber).AsDouble;
-      if Assigned(LBody.GetValue('longitude')) then LLocal.Longitude := (LBody.GetValue('longitude') as TJSONNumber).AsDouble;
-      LRepo.Update(LLocal);
+    LBody := Req.Body<TJSONObject>;
+    if not Assigned(LBody) then begin Res.Status(400); Exit; end;
+    
+    LRepo := TRepositoryLocation.Create;
+    try
+      LLocal := LRepo.GetById('base_hangar_01');
+      if not Assigned(LLocal) then
+      begin
+        // Se por algum motivo deletaram do BD, recria automático
+        LLocal := TLocalEntity.Create;
+        LLocal.Id := 'base_hangar_01';
+        LLocal.Tipo := ltBase;
+        
+        if Assigned(LBody.GetValue('name')) then LLocal.Nome := LBody.GetValue('name').Value;
+        if Assigned(LBody.GetValue('latitude')) then LLocal.Latitude := StrToFloatDef(LBody.GetValue('latitude').Value.Replace('.', ','), 0.0);
+        if Assigned(LBody.GetValue('longitude')) then LLocal.Longitude := StrToFloatDef(LBody.GetValue('longitude').Value.Replace('.', ','), 0.0);
+        if (LLocal.Latitude = 0) and Assigned(LBody.GetValue('latitude')) then LLocal.Latitude := StrToFloatDef(LBody.GetValue('latitude').Value.Replace(',', '.'), 0.0);
+        if (LLocal.Longitude = 0) and Assigned(LBody.GetValue('longitude')) then LLocal.Longitude := StrToFloatDef(LBody.GetValue('longitude').Value.Replace(',', '.'), 0.0);
+        LRepo.Insert(LLocal);
+      end
+      else
+      begin
+        // Atualiza normal
+        if Assigned(LBody.GetValue('name')) then LLocal.Nome := LBody.GetValue('name').Value;
+        if Assigned(LBody.GetValue('latitude')) then LLocal.Latitude := StrToFloatDef(LBody.GetValue('latitude').Value.Replace('.', ','), 0.0);
+        if Assigned(LBody.GetValue('longitude')) then LLocal.Longitude := StrToFloatDef(LBody.GetValue('longitude').Value.Replace('.', ','), 0.0);
+        if (LLocal.Latitude = 0) and Assigned(LBody.GetValue('latitude')) then LLocal.Latitude := StrToFloatDef(LBody.GetValue('latitude').Value.Replace(',', '.'), 0.0);
+        if (LLocal.Longitude = 0) and Assigned(LBody.GetValue('longitude')) then LLocal.Longitude := StrToFloatDef(LBody.GetValue('longitude').Value.Replace(',', '.'), 0.0);
+        LRepo.Update(LLocal);
+      end;
+      Res.Status(200).Send('{"message": "Endereço do CD Base Atualizado com Sucesso!"}');
+      LLocal.Free;
+    finally
+      LRepo.Free;
     end;
-    Res.Status(200).Send('{"message": "Endereço do CD Base Atualizado com Sucesso!"}');
-    LLocal.Free;
-  finally
-    LRepo.Free;
+  except
+    on E: Exception do
+    begin
+      Res.Status(500).Send('{"error": "' + E.Message.Replace('"', '\"') + '"}');
+    end;
   end;
 end;
 

@@ -7,5 +7,8 @@
 	"projects": [
 		"DroneDelivery.Client.dproj"
 	],
-	"dependencies": {}
+	"dependencies": {
+		"github.com/ahausladen/jsondataobjects": ">0.0.0",
+		"github.com/viniciussanchez/restrequest4delphi": "^v4.0.23"
+	}
 }

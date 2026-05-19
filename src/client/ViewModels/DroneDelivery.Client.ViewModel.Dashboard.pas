@@ -5,7 +5,7 @@ interface
 uses
   DroneDelivery.Client.Service.API, DroneDelivery.DTO.Drones, System.JSON,
   System.Generics.Collections, System.SysUtils, REST.Json,
-  DroneDelivery.Client.Service.Maps;
+  DroneDelivery.Client.Service.Maps, JsonDataObjects;
 
 type
   TProcSuccess = reference to procedure(AJson: string);
@@ -39,7 +39,7 @@ uses
 function TViewModelDashboard.GetHangar(out AName: string; out ALat, ALng: Double): Boolean;
 var
   LResponse: IResponse;
-  LJson: TJSONObject;
+  LJson: TJsonObject;
 begin
   Result := False;
   AName := ''; ALat := 0; ALng := 0;
@@ -48,17 +48,18 @@ begin
       .BaseURL('http://localhost:9000')
       .Resource('locations/hangar')
       .Accept('application/json')
+      .AcceptCharset('utf-8')
       .Get;
 
     if LResponse.StatusCode = 200 then
     begin
-      LJson := TJSONObject.ParseJSONValue(LResponse.Content) as TJSONObject;
+      LJson := TJsonObject.Parse(LResponse.Content) as TJsonObject;
       if Assigned(LJson) then
       begin
         try
-          if Assigned(LJson.GetValue('name')) then AName := LJson.GetValue('name').Value;
-          if Assigned(LJson.GetValue('latitude')) then ALat := (LJson.GetValue('latitude') as TJSONNumber).AsDouble;
-          if Assigned(LJson.GetValue('longitude')) then ALng := (LJson.GetValue('longitude') as TJSONNumber).AsDouble;
+          if LJson.Contains('name') then AName := LJson.S['name'];
+          if LJson.Contains('latitude') then ALat := LJson.D['latitude'];
+          if LJson.Contains('longitude') then ALng := LJson.D['longitude'];
           Result := True;
         finally
           LJson.Free;
@@ -72,60 +73,64 @@ end;
 
 function TViewModelDashboard.GravarHangar(const AName: string; ALat, ALng: Double): Boolean;
 var
-  LBody: TJSONObject;
+  LBodyObj: System.JSON.TJSONObject;
   LResponse: IResponse;
 begin
   Result := False;
-  LBody := TJSONObject.Create;
-  try
-    LBody.AddPair('name', AName);
-    LBody.AddPair('latitude', TJSONNumber.Create(ALat));
-    LBody.AddPair('longitude', TJSONNumber.Create(ALng));
+  LBodyObj := System.JSON.TJSONObject.Create;
+  // RESTRequest4D takes ownership of LBodyObj and frees it automatically!
+  LBodyObj.AddPair('name', AName);
+  LBodyObj.AddPair('latitude', System.JSON.TJSONNumber.Create(ALat));
+  LBodyObj.AddPair('longitude', System.JSON.TJSONNumber.Create(ALng));
 
-    LResponse := TRequest.New
-      .BaseURL('http://localhost:9000')
-      .Resource('locations/hangar')
-      .AddBody(LBody)
-      .Accept('application/json')
-      .Put;
+  LResponse := TRequest.New
+    .BaseURL('http://localhost:9000')
+    .Resource('locations/hangar')
+    .ContentType('application/json')
+    .AcceptCharset('utf-8')
+    .AddBody(LBodyObj)
+    .RaiseExceptionOn500(False)
+    .Put;
 
-    Result := LResponse.StatusCode = 200;
-  finally
-    LBody.Free;
-  end;
+  if LResponse.StatusCode <> 200 then
+    raise Exception.Create(LResponse.Content);
+
+  Result := LResponse.StatusCode = 200;
 end;
 
 procedure TViewModelDashboard.CalcularRota(const ADroneId: string;
   AWaypoints: TObjectList<TMapPoint>; OnSuccess: TProcSuccess; OnError: TProcError);
 var
-  LBody: TJSONObject;
-  LArrayWaypoints: TJSONArray;
+  LBody: TJsonObject;
+  LArrayWaypoints: TJsonArray;
+  LObjPoint: TJsonObject;
   LPoint: TMapPoint;
   LResponse: IResponse;
 begin
-  LBody := TJSONObject.Create;
-  LArrayWaypoints := TJSONArray.Create;
+  LBody := TJsonObject.Create;
   try
-    LBody.AddPair('drone_id', ADroneId);
+    LBody.S['drone_id'] := ADroneId;
 
     // Converte a lista de waypoints para o JSON
     if Assigned(AWaypoints) then
     begin
+      LArrayWaypoints := LBody.A['waypoints'];
       for LPoint in AWaypoints do
       begin
-        LArrayWaypoints.AddElement(TJSONObject.Create
-          .AddPair('lat', TJSONNumber.Create(LPoint.Lat))
-          .AddPair('lng', TJSONNumber.Create(LPoint.Lng))
-          .AddPair('label', LPoint.LabelName));
+        LObjPoint := LArrayWaypoints.AddObject;
+        LObjPoint.D['lat'] := LPoint.Lat;
+        LObjPoint.D['lng'] := LPoint.Lng;
+        LObjPoint.S['label'] := LPoint.LabelName;
       end;
     end;
-    LBody.AddPair('waypoints', LArrayWaypoints);
 
     LResponse := TRequest.New
       .BaseURL('http://localhost:9000')
       .Resource('routes/calculate')
-      .AddBody(LBody)
+      .AddBody(LBody.ToJSON)
+      .ContentType('application/json')
       .Accept('application/json')
+      .AcceptCharset('utf-8')
       .Post;
 
     if LResponse.StatusCode = 200 then
@@ -139,8 +144,6 @@ begin
         OnError(Format('Erro %d: %s', [LResponse.StatusCode, LResponse.StatusText]));
     end;
   finally
-    // No RESTRequest4Delphi, o LBody deve ser liberado manualmente se
-    // não for passado como owned. Mas para evitar leaks:
     LBody.Free;
   end;
 end;
@@ -159,21 +162,21 @@ end;
 function TViewModelDashboard.CalcularPreco(const ADroneId: string; ADistanciaKm: Double): string;
 var
   LJSONStr: string;
-  LJsonObj: TJSONObject;
+  LJsonObj: TJsonObject;
 begin
   LJSONStr := FAPI.CalcularPreco(ADroneId, ADistanciaKm);
   try
-    LJsonObj := TJSONObject.ParseJSONValue(LJSONStr) as TJSONObject;
+    LJsonObj := TJsonObject.Parse(LJSONStr) as TJsonObject;
     if Assigned(LJsonObj) then
     begin
       try
-        if Assigned(LJsonObj.GetValue('error')) then
-          Exit(LJsonObj.GetValue('error').Value); 
+        if LJsonObj.Contains('error') then
+          Exit(LJsonObj.S['error']); 
           
-        if Assigned(LJsonObj.GetValue('estimated_price')) then
-          Result := Format('Custo Calculado: R$ %s', [LJsonObj.GetValue('estimated_price').Value])
-        else if Assigned(LJsonObj.GetValue('delivery_price_brl')) then
-          Result := Format('Custo Calculado: R$ %s', [LJsonObj.GetValue('delivery_price_brl').Value])
+        if LJsonObj.Contains('estimated_price') then
+          Result := Format('Custo Calculado: R$ %s', [LJsonObj.S['estimated_price']])
+        else if LJsonObj.Contains('delivery_price_brl') then
+          Result := Format('Custo Calculado: R$ %s', [LJsonObj.S['delivery_price_brl']])
         else
           Result := 'Retorno desconhecido da API.';
       finally
@@ -190,8 +193,8 @@ end;
 function TViewModelDashboard.LoadDrones: TObjectList<TDroneDTO>;
 var
   LJsonString: string;
-  LJsonArr: TJSONArray;
-  LJsonVal: TJSONValue;
+  LJsonArr: System.JSON.TJSONArray;
+  LJsonVal: System.JSON.TJSONValue;
   LDrone: TDroneDTO;
 begin
   Result := TObjectList<TDroneDTO>.Create(True);
@@ -200,13 +203,13 @@ begin
     
     if LJsonString.Trim <> '' then
     begin
-      LJsonArr := TJSONObject.ParseJSONValue(LJsonString) as TJSONArray;
+      LJsonArr := System.JSON.TJSONObject.ParseJSONValue(LJsonString) as System.JSON.TJSONArray;
       if Assigned(LJsonArr) then
       begin
         try
           for LJsonVal in LJsonArr do
           begin
-            LDrone := TJson.JsonToObject<TDroneDTO>(LJsonVal as TJSONObject);
+            LDrone := TJson.JsonToObject<TDroneDTO>(LJsonVal as System.JSON.TJSONObject);
             if Assigned(LDrone) then
               Result.Add(LDrone);
           end;

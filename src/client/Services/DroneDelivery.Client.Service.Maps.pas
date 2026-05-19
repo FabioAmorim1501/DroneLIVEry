@@ -1,10 +1,11 @@
-﻿unit DroneDelivery.Client.Service.Maps;
+unit DroneDelivery.Client.Service.Maps;
 
 interface
 
 uses
   System.SysUtils, System.Classes, System.JSON, System.Math,
-  System.Net.HttpClient, System.NetEncoding, System.Generics.Collections;
+  System.Net.HttpClient, System.NetEncoding, System.Generics.Collections,
+  System.RegularExpressions;
 
 type
   TMapPoint = class
@@ -31,6 +32,8 @@ type
     // Gerador de Polyline Payload consumido pelo mapa Leaflet
     class function GenerateRoutePayload(AHub: TMapPoint; AWaypoints: TObjectList<TMapPoint>;
       DroneMaxRangeKm, DroneBatteryWh: Double): string;
+  private
+    class function UrlEncodeUtf8(const S: string): string;
   end;
 
 implementation
@@ -47,44 +50,63 @@ end;
 
 { TMapService }
 
+class function TMapService.UrlEncodeUtf8(const S: string): string;
+var
+  Bytes: TBytes;
+  I: Integer;
+begin
+  Bytes := TEncoding.UTF8.GetBytes(S);
+  Result := '';
+  for I := 0 to High(Bytes) do
+  begin
+    if Bytes[I] in [$30..$39, $41..$5A, $61..$7A, Ord('-'), Ord('_'), Ord('.'), Ord('~')] then
+      Result := Result + Chr(Bytes[I])
+    else if Bytes[I] = Ord(' ') then
+      Result := Result + '+'
+    else
+      Result := Result + '%' + IntToHex(Bytes[I], 2);
+  end;
+end;
+
 class procedure TMapService.GeocodeAddressAsync(const AAddress: string; AOnSuccess: TProc<Double, Double>; AOnError: TProc<string>);
 var
-  LHttp: THTTPClient;
   LUrl: string;
 begin
-  LUrl := 'https://nominatim.openstreetmap.org/search?format=json&q=' + TNetEncoding.URL.Encode(AAddress);
+  LUrl := 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=1&sourceCountry=BRA&SingleLine=' + UrlEncodeUtf8(AAddress);
   
   TThread.CreateAnonymousThread(
     procedure
     var
       LResp: IHTTPResponse;
-      LJsonArray: TJSONArray;
       LJsonObj: TJSONObject;
+      LJsonArr: TJSONArray;
+      LInner, LLoc: TJSONObject;
       LLat, LLng: Double;
       LHttpLocal: THTTPClient;
     begin
       LHttpLocal := THTTPClient.Create;
       try
         try
-          // Header obrigatorio do OSM
           LHttpLocal.CustomHeaders['User-Agent'] := 'DroneLIVEry-App/1.0';
           LResp := LHttpLocal.Get(LUrl);
           
           if LResp.StatusCode = 200 then
           begin
-            LJsonArray := TJSONObject.ParseJSONValue(LResp.ContentAsString) as TJSONArray;
-            if Assigned(LJsonArray) then
+            LJsonObj := TJSONObject.ParseJSONValue(LResp.ContentAsString(TEncoding.UTF8)) as TJSONObject;
+            if Assigned(LJsonObj) then
             begin
               try
-                if LJsonArray.Count > 0 then
+                LJsonArr := LJsonObj.GetValue('candidates') as TJSONArray;
+                if Assigned(LJsonArr) and (LJsonArr.Count > 0) then
                 begin
-                  LJsonObj := LJsonArray.Items[0] as TJSONObject;
-                  LLat := StrToFloatDef(LJsonObj.GetValue<string>('lat').Replace('.', ','), 0.0);
-                  LLng := StrToFloatDef(LJsonObj.GetValue<string>('lon').Replace('.', ','), 0.0);
+                  LInner := LJsonArr.Items[0] as TJSONObject;
+                  LLoc := LInner.GetValue('location') as TJSONObject;
                   
-                  // fallback de locale
-                  if LLat = 0 then LLat := StrToFloatDef(LJsonObj.GetValue<string>('lat').Replace(',', '.'), 0.0);
-                  if LLng = 0 then LLng := StrToFloatDef(LJsonObj.GetValue<string>('lon').Replace(',', '.'), 0.0);
+                  LLat := StrToFloatDef(LLoc.GetValue<string>('y').Replace('.', ','), 0.0);
+                  LLng := StrToFloatDef(LLoc.GetValue<string>('x').Replace('.', ','), 0.0);
+                  
+                  if LLat = 0 then LLat := StrToFloatDef(LLoc.GetValue<string>('y').Replace(',', '.'), 0.0);
+                  if LLng = 0 then LLng := StrToFloatDef(LLoc.GetValue<string>('x').Replace(',', '.'), 0.0);
 
                   TThread.Queue(nil, procedure begin AOnSuccess(LLat, LLng); end);
                 end
@@ -93,7 +115,7 @@ begin
                   TThread.Queue(nil, procedure begin AOnError('Endereço não encontrado.'); end);
                 end;
               finally
-                LJsonArray.Free;
+                LJsonObj.Free;
               end;
             end;
           end
@@ -114,15 +136,16 @@ class procedure TMapService.SearchAddressSuggestionsAsync(const AQuery: string;
 var
   LUrl: string;
 begin
-  LUrl := 'https://nominatim.openstreetmap.org/search?format=json&limit=5&q='
-    + TNetEncoding.URL.Encode(AQuery);
+  LUrl := 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=5&sourceCountry=BRA&SingleLine='
+    + UrlEncodeUtf8(AQuery);
 
   TThread.CreateAnonymousThread(
     procedure
     var
       LHttpLocal: THTTPClient;
       LResp: IHTTPResponse;
-      LJsonArray: TJSONArray;
+      LJsonObj: TJSONObject;
+      LJsonArr: TJSONArray;
       LInner: TJSONObject;
       LSuggestions: TArray<string>;
       I: Integer;
@@ -134,24 +157,30 @@ begin
           LResp := LHttpLocal.Get(LUrl);
           if LResp.StatusCode = 200 then
           begin
-            LJsonArray := TJSONObject.ParseJSONValue(LResp.ContentAsString) as TJSONArray;
-            if Assigned(LJsonArray) then
+            LJsonObj := TJSONObject.ParseJSONValue(LResp.ContentAsString(TEncoding.UTF8)) as TJSONObject;
+            if Assigned(LJsonObj) then
             begin
               try
-                SetLength(LSuggestions, LJsonArray.Count);
-                for I := 0 to LJsonArray.Count - 1 do
+                LJsonArr := LJsonObj.GetValue('candidates') as TJSONArray;
+                if Assigned(LJsonArr) then
                 begin
-                  LInner := LJsonArray.Items[I] as TJSONObject;
-                  LSuggestions[I] := LInner.GetValue<string>('display_name');
-                end;
-                TThread.Queue(nil, procedure begin AOnSuccess(LSuggestions); end);
+                  SetLength(LSuggestions, 0);
+                  for I := 0 to LJsonArr.Count - 1 do
+                  begin
+                    LInner := LJsonArr.Items[I] as TJSONObject;
+                    SetLength(LSuggestions, Length(LSuggestions) + 1);
+                    LSuggestions[High(LSuggestions)] := LInner.GetValue<string>('address');
+                  end;
+                  TThread.Queue(nil, procedure begin AOnSuccess(LSuggestions); end);
+                end else
+                  TThread.Queue(nil, procedure begin AOnSuccess([]); end);
               finally
-                LJsonArray.Free;
+                LJsonObj.Free;
               end;
             end;
           end
           else
-            TThread.Queue(nil, procedure begin AOnError('HTTP ' + LResp.StatusCode.ToString); end);
+            TThread.Queue(nil, procedure begin AOnError('Erro HTTP ' + LResp.StatusCode.ToString); end);
         except
           on E: Exception do
             TThread.Queue(nil, procedure begin AOnError(E.Message); end);

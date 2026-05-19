@@ -1,96 +1,217 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <title>DroneLIVEry Operations Map</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Component</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #FFF; }
-        #map { height: 100vh; width: 100vw; }
-        .drone-popup { text-align: center; }
-        .drone-popup b { font-size: 16px; color: #1E293B; }
-        .drone-popup span { display: block; margin-top: 5px; font-weight: bold; padding: 3px; border-radius: 4px; }
-        .bat-safe { background: #DCFCE7; color: #15803D; }
-        .bat-warn { background: #FEF9C3; color: #A16207; }
-        .bat-danger { background: #FEE2E2; color: #B91C1C; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Inter', sans-serif; 
+            background: #F8FAFC; 
+            overflow: hidden;
+        }
+        #map { 
+            height: 100vh; 
+            width: 100vw; 
+            z-index: 1;
+        }
+        
+        /* Premium Popup Styling */
+        .leaflet-popup-content-wrapper {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 4px;
+        }
+        .leaflet-popup-tip {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .generic-popup {
+            text-align: center;
+            font-size: 14px;
+            color: #1E293B;
+            padding: 5px;
+        }
+        .generic-popup b {
+            display: block;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #0F172A;
+        }
+
+        /* Drone specific elements */
+        .bat-badge {
+            display: inline-block;
+            margin-top: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .bat-safe { background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
+        .bat-warn { background: #FEF9C3; color: #A16207; border: 1px solid #FEF08A; }
+        .bat-danger { background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; }
+        
+        /* Custom Marker Animation */
+        .animated-marker {
+            animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Map Controls */
+        .leaflet-control-zoom a {
+            background-color: rgba(255, 255, 255, 0.9) !important;
+            color: #334155 !important;
+            border: 1px solid #E2E8F0 !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background-color: #FFF !important;
+            color: #0F172A !important;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <script>
-        var map = L.map('map', {zoomControl: false}).setView([-23.5505, -46.6333], 12); // SP Central
-        L.control.zoom({position: 'bottomright'}).addTo(map);
+        // --- Map Initialization ---
+        var map = L.map('map', { zoomControl: false }).setView([-23.5505, -46.6333], 12); // Default SP Central
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+        // Modern Light Theme Basemap (Carto Voyager)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap contributors © CARTO',
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
             maxZoom: 19
         }).addTo(map);
 
-        var markers = [];
-        var polylines = [];
+        // --- Generic Map State ---
+        var g_markers = [];
+        var g_polylines = [];
 
-        // Delphi Injected Function
-        // points = [ {lat: -23.5, lng: -46.6, label: "Hangar", battery: 100}, 
-        //            {lat: -23.6, lng: -46.5, label: "Destino 1", battery: 80} ]
-        function drawMission(pointsJson) {
-            var points = JSON.parse(pointsJson);
-            
-            // clear old
-            markers.forEach(m => map.removeLayer(m));
-            polylines.forEach(p => map.removeLayer(p));
-            markers = [];
-            polylines = [];
-            
-            if (!points || points.length === 0) return "NO_DATA";
-
-            var latLngs = [];
-            
-            points.forEach((p, index) => {
-                var latLng = [p.lat, p.lng];
-                latLngs.push(latLng);
-                
-                // Color Picker for Battery
-                var batClass = 'bat-safe';
-                if (p.battery < 40 && p.battery >= 20) batClass = 'bat-warn';
-                if (p.battery < 20) batClass = 'bat-danger';
-
-                var batStr = p.battery !== null ? `<span class="${batClass}">🔋 Bateria: ${p.battery.toFixed(1)}%</span>` : '';
-                var isHub = (index === 0 || index === points.length - 1);
-                var iconUrl = isHub ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png' : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
-
-                var colorIcon = new L.Icon({
-                    iconUrl: iconUrl,
-                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                    popupAnchor: [1, -34],
-                    shadowSize: [41, 41]
-                });
-
-                var marker = L.marker(latLng, {icon: colorIcon}).addTo(map);
-                marker.bindPopup(`<div class="drone-popup"><b>${p.label}</b>${batStr}</div>`);
-                if(index === points.length - 1) marker.openPopup(); // Open last (usually hub return)
-                markers.push(marker);
-            });
-
-            // Draw line
-            if (latLngs.length > 1) {
-                var line = L.polyline(latLngs, {color: '#3B82F6', weight: 4, opacity: 0.8, dashArray: '10, 10'}).addTo(map);
-                polylines.push(line);
-                
-                // Animate boundaries
-                map.fitBounds(line.getBounds(), {padding: [50, 50]});
-            } else {
-                map.setView(latLngs[0], 15);
-            }
-
-            return "SUCCESS";
+        // --- Generic API ---
+        function clearMap() {
+            g_markers.forEach(m => map.removeLayer(m));
+            g_polylines.forEach(p => map.removeLayer(p));
+            g_markers = [];
+            g_polylines = [];
         }
 
-        // Test Call
-        // drawMission('[{"lat":-23.55,"lng":-46.63,"label":"HUB Central","battery":100},{"lat":-23.58,"lng":-46.68,"label":"Av. Faria Lima","battery":84},{"lat":-23.55,"lng":-46.63,"label":"Retorno HUB","battery":68}]');
+        function addMarker(lat, lng, htmlPopup, iconUrl, autoOpenPopup) {
+            var iconOptions = {
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                shadowSize: [41, 41],
+                className: 'animated-marker'
+            };
+            if (iconUrl) iconOptions.iconUrl = iconUrl;
+            else iconOptions.iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
+
+            var icon = new L.Icon(iconOptions);
+            var marker = L.marker([lat, lng], {icon: icon}).addTo(map);
+            
+            if (htmlPopup) {
+                marker.bindPopup(`<div class="generic-popup">${htmlPopup}</div>`);
+                if (autoOpenPopup) marker.openPopup();
+            }
+            
+            g_markers.push(marker);
+            return marker;
+        }
+
+        function drawPolyline(latLngArray, colorHex) {
+            if (!latLngArray || latLngArray.length < 2) return;
+            var line = L.polyline(latLngArray, {
+                color: colorHex || '#3B82F6', 
+                weight: 4, 
+                opacity: 0.8, 
+                dashArray: '8, 8',
+                lineCap: 'round',
+                lineJoin: 'round'
+            }).addTo(map);
+            
+            g_polylines.push(line);
+            return line;
+        }
+
+        function fitBounds(latLngArray) {
+            if (!latLngArray || latLngArray.length === 0) return;
+            if (latLngArray.length === 1) {
+                map.setView(latLngArray[0], 15, { animate: true, duration: 1 });
+            } else {
+                map.fitBounds(L.latLngBounds(latLngArray), { padding: [50, 50], animate: true, duration: 1 });
+            }
+        }
+
+        function setMapCenter(lat, lng, zoom) {
+            map.setView([lat, lng], zoom || 14, { animate: true, duration: 1 });
+        }
+
+        // --- Drone Specific Logic Wrapper ---
+        // Expected payload: [ {lat: ..., lng: ..., label: "...", battery: 100}, ... ]
+        function drawMission(pointsJson) {
+            clearMap();
+            
+            try {
+                var points = JSON.parse(pointsJson);
+                if (!points || points.length === 0) return "NO_DATA";
+
+                var latLngs = [];
+                
+                points.forEach((p, index) => {
+                    var latLng = [p.lat, p.lng];
+                    latLngs.push(latLng);
+                    
+                    var batClass = 'bat-safe';
+                    if (p.battery < 40 && p.battery >= 20) batClass = 'bat-warn';
+                    if (p.battery < 20) batClass = 'bat-danger';
+
+                    var batStr = (p.battery !== null && p.battery !== undefined) 
+                                 ? `<span class="bat-badge ${batClass}">⚡ ${p.battery.toFixed(1)}%</span>` 
+                                 : '';
+                    
+                    var popupHtml = `<b>${p.label}</b>${batStr}`;
+                    
+                    var isHub = (index === 0 || index === points.length - 1);
+                    var iconUrl = isHub 
+                        ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png' 
+                        : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
+
+                    // Auto open popup for the last marker (usually hub return)
+                    var autoOpen = (index === points.length - 1);
+                    addMarker(p.lat, p.lng, popupHtml, iconUrl, autoOpen);
+                });
+
+                if (latLngs.length > 1) {
+                    drawPolyline(latLngs, '#3B82F6');
+                }
+                
+                fitBounds(latLngs);
+                return "SUCCESS";
+
+            } catch (e) {
+                console.error("Error drawing mission:", e);
+                return "ERROR: " + e.message;
+            }
+        }
     </script>
 </body>
 </html>

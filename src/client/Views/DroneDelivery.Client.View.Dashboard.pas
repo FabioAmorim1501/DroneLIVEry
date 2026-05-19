@@ -16,12 +16,13 @@ interface
 
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
-  System.Math, System.JSON, System.Net.HttpClient, System.Generics.Collections,
+  System.Math, System.JSON, System.Net.HttpClient, System.Generics.Collections, System.RegularExpressions,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
   FMX.Controls.Presentation, FMX.StdCtrls, FMX.Layouts, FMX.Effects, FMX.Ani,
-  FMX.Edit, FMX.WebBrowser, FMX.ListBox,
+  FMX.Edit, FMX.ListBox, FMX.ComboEdit,
   DroneDelivery.DTO.Drones, DroneDelivery.Client.ViewModel.Dashboard,
-  DroneDelivery.Client.Service.Maps, System.IOUtils;
+  DroneDelivery.Client.Service.Maps, System.IOUtils,
+  DroneDelivery.Client.Component.Map;
 
 type
   { Enum para identificar a visão ativa }
@@ -76,14 +77,14 @@ type
     FModalBtnConfirm, FModalBtnClose: TCornerButton;
 
     { Componentes da tela de Operações (Mapa) }
-    FWebMap: TWebBrowser;
-    FEditWaypoint: TEdit;
+    FWebMap: TGenericMap;
+    FEditWaypoint: TComboEdit;
     FLblMapStatus: TLabel;
     FListBoxWaypoints: TLayout;
     FWaypointCount: Integer;
     FComboDrone: TComboBox;
-    FAutocompleteList: TListBox;
     FAutocompleteTimer: TTimer;
+    FHangarAutocompleteTimer: TTimer;
 
     { Componentes da tela de CRUD }
     FEditCrudName: TEdit;
@@ -93,7 +94,7 @@ type
     FEditCrudSpeed: TEdit;
     FEditCrudImageUrl: TEdit;
     FEditCrudStatus: TEdit;
-    FEditHangarAddress: TEdit;
+    FEditHangarAddress: TComboEdit;
     FLblCrudStatus: TLabel;
 
     { --- Módulo: Frota --- }
@@ -118,14 +119,19 @@ type
     procedure OnWaypointEditChange(Sender: TObject);
     procedure OnAutocompleteTimer(Sender: TObject);
     procedure OnAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem);
+    procedure OnHangarEditChange(Sender: TObject);
+    procedure OnHangarAutocompleteTimer(Sender: TObject);
+    procedure OnHangarAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem);
 
     { --- Módulo: CRUD / Estação --- }
     procedure BuildCrudView;
     procedure LoadCatalogueAsync;
-    procedure OnCatalogueModelClick(Sender: TObject);
+    procedure OnBtnZoomInClick(Sender: TObject);
+    procedure OnBtnZoomOutClick(Sender: TObject);
     procedure OnSaveDroneClick(Sender: TObject);
     procedure OnSaveHangarClick(Sender: TObject);
     procedure EnviarRotaAoMapa(const AJsonPontos: string);
+    procedure ProcessHangarSave(const AAddr: string; ALat, ALng: Double);
 
   public
   end;
@@ -157,6 +163,34 @@ const
   SIDEBAR_TEXT_ACTIVE  = $FFFFFFFF;
   SIDEBAR_TEXT_IDLE    = $FF94A3B8;
 
+function MergeAddressWithNumber(const AOriginal, ASuggestion: string): string;
+var
+  LMatch: TMatch;
+  LParts: TArray<string>;
+  I: Integer;
+begin
+  Result := ASuggestion;
+  LMatch := TRegEx.Match(AOriginal, '(?:,\s*|\s+)(\d+[A-Za-z]?)(?:\s*)$');
+  if LMatch.Success then
+  begin
+    LParts := ASuggestion.Split([',']);
+    var LHasNumber := False;
+    for I := 0 to High(LParts) do
+      if LParts[I].Trim = LMatch.Groups[1].Value then LHasNumber := True;
+      
+    if not LHasNumber then
+    begin
+      if Length(LParts) > 1 then
+      begin
+        Result := LParts[0].Trim + ', ' + LMatch.Groups[1].Value;
+        for I := 1 to High(LParts) do
+          Result := Result + ', ' + LParts[I].Trim;
+      end else
+        Result := ASuggestion + ', ' + LMatch.Groups[1].Value;
+    end;
+  end;
+end;
+
 function MakeLabel(AParent: TFmxObject; const AText: string; AFontSize: Single;
   AColor: TAlphaColor; ABold: Boolean = False): TLabel;
 begin
@@ -172,6 +206,14 @@ end;
 function MakeEdit(AParent: TFmxObject; const APrompt: string; AFontSize: Single = 14): TEdit;
 begin
   Result := TEdit.Create(AParent);
+  Result.Parent := AParent;
+  Result.Font.Size := AFontSize;
+  Result.TextPrompt := APrompt;
+end;
+
+function MakeComboEdit(AParent: TFmxObject; const APrompt: string; AFontSize: Single = 14): TComboEdit;
+begin
+  Result := TComboEdit.Create(AParent);
   Result.Parent := AParent;
   Result.Font.Size := AFontSize;
   Result.TextPrompt := APrompt;
@@ -241,14 +283,14 @@ begin
   case AView of
     avFleet: 
     begin 
-      lblTitle.Text := 'Drones Disponíveis'; 
+      lblTitle.Text := 'Drones Dispon'#237'veis'; 
       btnRefresh.Visible := True;
       ScrollDrones.Visible := True;
       ScrollDrones.BringToFront;
     end;
     avOps:   
     begin 
-      lblTitle.Text := 'Rotas & Logística'; 
+      lblTitle.Text := 'Rotas & Log'#237'stica'; 
       btnRefresh.Visible := False;
       lytOps.Visible := True;
       lytOps.BringToFront;
@@ -262,7 +304,7 @@ begin
     end;
     avCrud:  
     begin 
-      lblTitle.Text := 'Estação & Gestão de Frota'; 
+      lblTitle.Text := 'Esta'#231#227'o & Gest'#227'o de Frota'; 
       btnRefresh.Visible := False;
       lytCrud.Visible := True;
       lytCrud.BringToFront;
@@ -372,12 +414,12 @@ begin
         LHTTP.Get(ADrone.image_url, LStream);
         if LStream.Size > 0 then TThread.Synchronize(nil, procedure
         begin
-          LStream.Position := 0; LImgPlaceholder.Fill.Kind := TBrushKind.Bitmap; LImgPlaceholder.Fill.Bitmap.Bitmap.LoadFromStream(LStream); LInitials.Visible := False;
+          LStream.Position := 0; LImgPlaceholder.Fill.Kind := TBrushKind.Bitmap; LImgPlaceholder.Fill.Bitmap.WrapMode := TWrapMode.TileStretch; LImgPlaceholder.Fill.Bitmap.Bitmap.LoadFromStream(LStream); LInitials.Visible := False;
         end);
       finally LStream.Free; LHTTP.Free; end;
     end).Start;
 
-  LBtnAction := MakeButton(LCard, 'Testar Preço'); LBtnAction.Align := TAlignLayout.Right; LBtnAction.Width := 130;
+  LBtnAction := MakeButton(LCard, 'Testar Pre'#231'o'); LBtnAction.Align := TAlignLayout.Right; LBtnAction.Width := 130;
   LBtnAction.Margins.Rect := TRectF.Create(0, 20, 15, 20); LBtnAction.TagString := ADrone.id; LBtnAction.OnClick := OnDroneActionClick;
 
   LLayoutText := TLayout.Create(LCard); LLayoutText.Parent := LCard; LLayoutText.Align := TAlignLayout.Client; LLayoutText.Margins.Left := 20;
@@ -432,8 +474,8 @@ begin
   FModalPanel.Position.X := (Self.ClientWidth - FModalPanel.Width) / 2; FModalPanel.Position.Y := (Self.ClientHeight - FModalPanel.Height) / 2;
   FModalPanel.Fill.Color := COLOR_WHITE; FModalPanel.XRadius := 12; FModalPanel.YRadius := 12; FModalPanel.Stroke.Kind := TBrushKind.None;
 
-  LLblTitle := MakeLabel(FModalPanel, 'Simulador de Preço', 18, COLOR_DARK, True); LLblTitle.Align := TAlignLayout.Top; LLblTitle.Margins.Top := 20; LLblTitle.Height := 30; LLblTitle.TextSettings.HorzAlign := TTextAlign.Center;
-  LLblSubtitle := MakeLabel(FModalPanel, 'Distância (Km):', 12, COLOR_MUTED); LLblSubtitle.Position.Y := 60; LLblSubtitle.Width := 370; LLblSubtitle.TextSettings.HorzAlign := TTextAlign.Center;
+  LLblTitle := MakeLabel(FModalPanel, 'Simulador de Pre'#231'o', 18, COLOR_DARK, True); LLblTitle.Align := TAlignLayout.Top; LLblTitle.Margins.Top := 20; LLblTitle.Height := 30; LLblTitle.TextSettings.HorzAlign := TTextAlign.Center;
+  LLblSubtitle := MakeLabel(FModalPanel, 'Dist'#226'ncia (Km):', 12, COLOR_MUTED); LLblSubtitle.Position.Y := 60; LLblSubtitle.Width := 370; LLblSubtitle.TextSettings.HorzAlign := TTextAlign.Center;
 
   FModalEditDist := MakeEdit(FModalPanel, 'Ex: 15'); FModalEditDist.Position.X := 60; FModalEditDist.Position.Y := 85; FModalEditDist.Width := 250; FModalEditDist.Height := 40; FModalEditDist.Text := '10'; FModalEditDist.OnKeyDown := ActionModalKeyDown;
   FModalLblResult := MakeLabel(FModalPanel, '', 14, COLOR_DARK, True); FModalLblResult.Position.Y := 140; FModalLblResult.Width := 370; FModalLblResult.TextSettings.HorzAlign := TTextAlign.Center; FModalLblResult.Visible := False;
@@ -449,15 +491,15 @@ end;
 
 procedure TViewDashboard.EnviarRotaAoMapa(const AJsonPontos: string);
 begin
-  TThread.Synchronize(nil, procedure begin FWebMap.EvaluateJavaScript(Format('drawMission(%s)', [AJsonPontos.QuotedString])); end);
+  TThread.Synchronize(nil, procedure begin FWebMap.DrawDroneMission(AJsonPontos); end);
 end;
 
 procedure TViewDashboard.BuildOpsView;
 var
   LPainelEsq, LPainelMapBg: TRectangle;
-  LPanelBottom: TLayout;
+  LPanelBottom, LZoomLayout: TLayout;
   LLblTitle, LLblOpsWaypointTitle, LLblDroneTitle, LLblHintDrone: TLabel;
-  LBtnAdd, LBtnCalc, LBtnClear: TCornerButton;
+  LBtnAdd, LBtnCalc, LBtnClear, LBtnZoomIn, LBtnZoomOut: TCornerButton;
   LSeparator: TRectangle;
   LMapPath: string;
 begin
@@ -479,64 +521,69 @@ begin
   LPainelEsq.Fill.Color := COLOR_WHITE;
   LPainelEsq.Stroke.Color := $FFEAECF0;
 
-  { --- WebBrowser --- }
-  FWebMap := TWebBrowser.Create(lytOps);
+  { --- WebBrowser / Mapa --- }
+  FWebMap := TGenericMap.Create(lytOps);
   FWebMap.Parent := lytOps;
   FWebMap.Align := TAlignLayout.Client;
-  {$IFDEF MSWINDOWS}FWebMap.WindowsEngine := TWindowsEngine.EdgeIfAvailable;{$ENDIF}
 
-  LMapPath := TPath.Combine(ExtractFilePath(ParamStr(0)), 'assets\mapa.html');
-  if TFile.Exists(LMapPath) then FWebMap.Navigate(LMapPath)
-  else FWebMap.LoadFromStrings('<html><body><h3>Erro: assets\mapa.html não encontrado</h3></body></html>', '');
+  { --- Controles de Zoom --- }
+  LZoomLayout := TLayout.Create(lytOps);
+  LZoomLayout.Parent := lytOps;
+  LZoomLayout.Align := TAlignLayout.Right;
+  LZoomLayout.Width := 70;
+  
+  LBtnZoomOut := MakeButton(LZoomLayout, '-');
+  LBtnZoomOut.Align := TAlignLayout.Bottom;
+  LBtnZoomOut.Height := 45;
+  LBtnZoomOut.Margins.Rect := TRectF.Create(10, 0, 15, 25);
+  LBtnZoomOut.OnClick := OnBtnZoomOutClick;
+
+  LBtnZoomIn := MakeButton(LZoomLayout, '+');
+  LBtnZoomIn.Align := TAlignLayout.Bottom;
+  LBtnZoomIn.Height := 45;
+  LBtnZoomIn.Margins.Rect := TRectF.Create(10, 0, 15, 10);
+  LBtnZoomIn.OnClick := OnBtnZoomInClick;
 
   { --- Ordem Visual Idêntica ao Design Original --- }
-  LLblTitle := MakeLabel(LPainelEsq, 'Rotas & Logística', 15, COLOR_DARK, True);
+  LLblTitle := MakeLabel(LPainelEsq, 'Rotas e Log'#237'stica', 15, COLOR_DARK, True);
   LLblTitle.Align := TAlignLayout.Top;
   LLblTitle.Margins.Rect := TRectF.Create(20, 16, 0, 10);
   LLblTitle.Height := 30;
   LLblTitle.Position.Y := 0;
 
-  FEditWaypoint := MakeEdit(LPainelEsq, 'Endereço da Parada...');
+  FEditWaypoint := MakeComboEdit(LPainelEsq, 'Endere'#231'o da Parada...');
   FEditWaypoint.Align := TAlignLayout.Top;
   FEditWaypoint.Height := 40;
   FEditWaypoint.Margins.Rect := TRectF.Create(12, 5, 12, 5);
   FEditWaypoint.Position.Y := 40;
   FEditWaypoint.OnChangeTracking := OnWaypointEditChange;
 
-  FAutocompleteList := TListBox.Create(LPainelEsq);
-  FAutocompleteList.Parent := LPainelEsq;
-  FAutocompleteList.Align := TAlignLayout.Top;
-  FAutocompleteList.Height := 0;
-  FAutocompleteList.Margins.Rect := TRectF.Create(12, 0, 12, 0);
-  FAutocompleteList.Position.Y := 81;
-  FAutocompleteList.OnItemClick := OnAutocompleteSelect;
-
   FAutocompleteTimer := TTimer.Create(Self);
   FAutocompleteTimer.Interval := 400;
   FAutocompleteTimer.Enabled := False;
   FAutocompleteTimer.OnTimer := OnAutocompleteTimer;
 
+  LLblDroneTitle := MakeLabel(LPainelEsq, 'Aeronave para a Miss'#227'o', 13, COLOR_DARK, True);
+  LLblDroneTitle.Align := TAlignLayout.Top;
+  LLblDroneTitle.Margins.Rect := TRectF.Create(16, 15, 0, 5);
+  LLblDroneTitle.Position.Y := 135;
+
   FComboDrone := TComboBox.Create(LPainelEsq);
   FComboDrone.Parent := LPainelEsq;
   FComboDrone.Align := TAlignLayout.Top;
   FComboDrone.Height := 38;
-  FComboDrone.Margins.Rect := TRectF.Create(12, 10, 12, 5);
-  FComboDrone.Position.Y := 90;
+  FComboDrone.Margins.Rect := TRectF.Create(12, 0, 12, 5);
+  FComboDrone.Position.Y := 140;
   FComboDrone.Items.Add('(Selecione um drone)');
   FComboDrone.ItemIndex := 0;
   FComboDrone.OnChange := OnDroneComboChange;
-
-  LLblDroneTitle := MakeLabel(LPainelEsq, 'Aeronave para a Missão', 13, COLOR_DARK, True);
-  LLblDroneTitle.Align := TAlignLayout.Top;
-  LLblDroneTitle.Margins.Rect := TRectF.Create(16, 5, 0, 0);
-  LLblDroneTitle.Position.Y := 135;
 
   LLblHintDrone := MakeLabel(LPainelEsq, 'Acesse o menu para carregar a lista.', 10, COLOR_MUTED);
   LLblHintDrone.Align := TAlignLayout.Top;
   LLblHintDrone.Margins.Rect := TRectF.Create(16, 2, 0, 0);
   LLblHintDrone.Position.Y := 155;
 
-  LLblOpsWaypointTitle := MakeLabel(LPainelEsq, 'Paradas da Missão', 14, COLOR_DARK, True);
+  LLblOpsWaypointTitle := MakeLabel(LPainelEsq, 'Paradas da Miss'#227'o', 14, COLOR_DARK, True);
   LLblOpsWaypointTitle.Align := TAlignLayout.Top;
   LLblOpsWaypointTitle.Margins.Rect := TRectF.Create(16, 15, 0, 5);
   LLblOpsWaypointTitle.Position.Y := 185;
@@ -576,17 +623,51 @@ end;
 
 
 procedure TViewDashboard.OnWaypointEditChange(Sender: TObject);
-begin FAutocompleteTimer.Enabled := False; if Length(FEditWaypoint.Text) >= 3 then FAutocompleteTimer.Enabled := True; end;
+begin 
+  FAutocompleteTimer.Enabled := False; 
+  if FEditWaypoint.Items.IndexOf(FEditWaypoint.Text) >= 0 then Exit;
+  if Length(FEditWaypoint.Text) >= 3 then FAutocompleteTimer.Enabled := True; 
+end;
 
 procedure TViewDashboard.OnAutocompleteTimer(Sender: TObject);
 begin
   FAutocompleteTimer.Enabled := False;
   TMapService.SearchAddressSuggestionsAsync(FEditWaypoint.Text, procedure(ASugg: TArray<string>)
-  var I: Integer; begin FAutocompleteList.Items.Clear; for I := 0 to High(ASugg) do FAutocompleteList.Items.Add(ASugg[I]); FAutocompleteList.Height := Min(Length(ASugg), 5) * 32; end, procedure(E: string) begin FAutocompleteList.Height := 0; end);
+  var I: Integer; 
+      LMerged: string;
+      LSavedText: string;
+      LSavedSel: Integer;
+  begin 
+    LSavedText := FEditWaypoint.Text;
+    LSavedSel := FEditWaypoint.SelStart;
+    
+    FEditWaypoint.OnChangeTracking := nil;
+    try
+      FEditWaypoint.Items.Clear; 
+      for I := 0 to High(ASugg) do 
+      begin
+        FEditWaypoint.Items.Add(ASugg[I]);
+      end;
+      FEditWaypoint.Text := LSavedText;
+      FEditWaypoint.SelStart := LSavedSel;
+      
+      if Length(ASugg) > 0 then
+      begin
+        FEditWaypoint.DropDown;
+        FEditWaypoint.Text := LSavedText;
+        FEditWaypoint.SelStart := LSavedSel;
+      end;
+    finally
+      FEditWaypoint.OnChangeTracking := OnWaypointEditChange;
+    end;
+  end, 
+  procedure(E: string) begin end);
 end;
 
 procedure TViewDashboard.OnAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem);
-begin FEditWaypoint.Text := Item.Text; FAutocompleteList.Items.Clear; FAutocompleteList.Height := 0; end;
+begin 
+  // No longer needed for ComboEdit
+end;
 
 procedure TViewDashboard.OnAddWaypointClick(Sender: TObject);
 begin
@@ -604,7 +685,7 @@ end;
 procedure TViewDashboard.OnClearRouteClick(Sender: TObject);
 begin
   FWaypoints.Clear; FWaypointCount := 0; while FListBoxWaypoints.ChildrenCount > 0 do FListBoxWaypoints.Children[0].Free; FListBoxWaypoints.Height := 0;
-  if Assigned(FWebMap) then FWebMap.EvaluateJavaScript('drawMission("[]")');
+  if Assigned(FWebMap) then FWebMap.ClearMap;
 end;
 
 procedure TViewDashboard.RefreshMapRoute;
@@ -612,13 +693,23 @@ var LHub: TMapPoint; LPayload: string;
 begin
   LHub := TMapPoint.Create(FHubLat, FHubLng, 'HUB');
   try LPayload := TMapService.GenerateRoutePayload(LHub, FWaypoints, FSelectedDroneRange, 0); finally LHub.Free; end;
-  FWebMap.EvaluateJavaScript(Format('drawMission(%s)', [LPayload.QuotedString]));
+  if Assigned(FWebMap) then FWebMap.DrawDroneMission(LPayload);
 end;
 
 procedure TViewDashboard.OnCalculateRouteClick(Sender: TObject);
 begin
   if FSelectedDroneId.IsEmpty then Exit;
   FViewModel.CalcularRota(FSelectedDroneId, FWaypoints, procedure(Resp: string) begin EnviarRotaAoMapa(Resp); end, procedure(E: string) begin FLblMapStatus.Text := E; end);
+end;
+
+procedure TViewDashboard.OnBtnZoomInClick(Sender: TObject);
+begin
+  if Assigned(FWebMap) then FWebMap.ZoomIn;
+end;
+
+procedure TViewDashboard.OnBtnZoomOutClick(Sender: TObject);
+begin
+  if Assigned(FWebMap) then FWebMap.ZoomOut;
 end;
 
 // ===========================================================================
@@ -669,12 +760,12 @@ begin
   FEditCrudName.Margins.Rect := TRectF.Create(16, 10, 16, 0);
   FEditCrudName.Position.Y := 40;
 
-  FEditCrudPayload := MakeEdit(LInner, 'Carga Máxima (Kg)');
+  FEditCrudPayload := MakeEdit(LInner, 'Carga M'#225'xima (Kg)');
   FEditCrudPayload.Align := TAlignLayout.Top;
   FEditCrudPayload.Margins.Rect := TRectF.Create(16, 8, 16, 0);
   FEditCrudPayload.Position.Y := 90;
 
-  FEditCrudRange := MakeEdit(LInner, 'Alcance Máximo (Km)');
+  FEditCrudRange := MakeEdit(LInner, 'Alcance M'#225'ximo (Km)');
   FEditCrudRange.Align := TAlignLayout.Top;
   FEditCrudRange.Margins.Rect := TRectF.Create(16, 8, 16, 0);
   FEditCrudRange.Position.Y := 140;
@@ -717,11 +808,11 @@ begin
   LPainelCatalogue.Fill.Color := COLOR_BG;
   LPainelCatalogue.Margins.Left := 8;
 
-  LLbl := MakeLabel(LPainelCatalogue, 'Catálogo de Modelos Sugeridos', 15, COLOR_DARK, True);
+  LLbl := MakeLabel(LPainelCatalogue, 'Cat'#225'logo de Modelos Sugeridos', 15, COLOR_DARK, True);
   LLbl.Align := TAlignLayout.Top;
   LLbl.Margins.Rect := TRectF.Create(16, 16, 0, 8);
 
-  LBtn := MakeButton(LPainelCatalogue, 'Buscar Catálogo');
+  LBtn := MakeButton(LPainelCatalogue, 'Buscar Cat'#225'logo');
   LBtn.Align := TAlignLayout.Top;
   LBtn.Margins.Rect := TRectF.Create(16, 8, 16, 0);
   LBtn.OnClick := OnLoadCatalogueClick;
@@ -734,17 +825,26 @@ begin
   LPainelHangar.Fill.Color := COLOR_WHITE;
   LPainelHangar.Stroke.Kind := TBrushKind.None;
 
-  LLbl := MakeLabel(LPainelHangar, 'Configuração do Hangar Base', 14, COLOR_DARK, True);
+  LLbl := MakeLabel(LPainelHangar, 'Configura'#231#227'o do Hangar Base', 14, COLOR_DARK, True);
   LLbl.Align := TAlignLayout.Top;
   LLbl.Margins.Rect := TRectF.Create(16, 12, 0, 0);
+  LLbl.Position.Y := 10;
 
-  FEditHangarAddress := MakeEdit(LPainelHangar, 'Endereço do CD Base...');
+  FEditHangarAddress := MakeComboEdit(LPainelHangar, 'Endere'#231'o do CD Base...');
   FEditHangarAddress.Align := TAlignLayout.Top;
   FEditHangarAddress.Margins.Rect := TRectF.Create(16, 8, 16, 0);
+  FEditHangarAddress.Position.Y := 40;
+  FEditHangarAddress.OnChangeTracking := OnHangarEditChange;
 
-  LBtn := MakeButton(LPainelHangar, 'Atualizar Localização');
+  FHangarAutocompleteTimer := TTimer.Create(Self);
+  FHangarAutocompleteTimer.Interval := 400;
+  FHangarAutocompleteTimer.Enabled := False;
+  FHangarAutocompleteTimer.OnTimer := OnHangarAutocompleteTimer;
+
+  LBtn := MakeButton(LPainelHangar, 'Atualizar Localiza'#231#227'o');
   LBtn.Align := TAlignLayout.Top;
   LBtn.Margins.Rect := TRectF.Create(16, 8, 16, 0);
+  LBtn.Position.Y := 80;
   LBtn.OnClick := OnSaveHangarClick;
 end;
 
@@ -758,8 +858,37 @@ end;
 
 procedure TViewDashboard.OnLoadCatalogueClick(Sender: TObject); begin LoadCatalogueAsync; end;
 procedure TViewDashboard.LoadCatalogueAsync; begin { Implementação async de catálogo } end;
-procedure TViewDashboard.OnCatalogueModelClick(Sender: TObject); begin end;
 procedure TViewDashboard.OnSaveDroneClick(Sender: TObject); begin end;
+procedure TViewDashboard.ProcessHangarSave(const AAddr: string; ALat, ALng: Double);
+begin
+  // 1. Atualização Otimista da UI (Executa no Main Thread imediatamente!)
+  FHubLat := ALat; 
+  FHubLng := ALng;
+  if Assigned(FWebMap) then FWebMap.SetCenter(ALat, ALng);
+  RefreshMapRoute;
+
+  // 2. Persistência Assíncrona no Backend (Thread paralela)
+  TThread.CreateAnonymousThread(procedure
+  var
+    LSaved: Boolean;
+  begin
+    try
+      LSaved := FViewModel.GravarHangar(AAddr, ALat, ALng);
+    except
+      LSaved := False; // Falha na conexão ou Timeout
+    end;
+
+    // 3. Feedback visual (Sincronizado de volta para a UI)
+    TThread.Synchronize(nil, procedure
+    begin
+      if LSaved then
+        ShowMessage('Endere'#231'o do Hub Base atualizado com sucesso no PostgreSQL!')
+      else
+        ShowMessage('Aviso: O local do Hub foi atualizado no mapa, mas houve falha de conex'#227'o ao gravar no Backend.');
+    end);
+  end).Start;
+end;
+
 procedure TViewDashboard.OnSaveHangarClick(Sender: TObject);
 var LAddr: string;
 begin
@@ -769,25 +898,60 @@ begin
   TMapService.GeocodeAddressAsync(LAddr,
     procedure(Lat, Lng: Double)
     begin
-      TThread.CreateAnonymousThread(procedure
-      begin
-        if FViewModel.GravarHangar(LAddr, Lat, Lng) then
-        begin
-          TThread.Synchronize(nil, procedure
-          begin
-            FHubLat := Lat; FHubLng := Lng;
-            ShowMessage('Endereço do CD Base atualizado com Sucesso no PostgreSQL!');
-          end);
-        end
-        else
-          TThread.Synchronize(nil, procedure begin ShowMessage('Erro ao comunicar com o Backend.'); end);
-      end).Start;
+      ProcessHangarSave(LAddr, Lat, Lng);
     end,
     procedure(E: string)
     begin
-      ShowMessage('Local não encontrado no mapa global. Tente ser mais específico. Erro: ' + E);
+      ShowMessage('Local n'#227'o encontrado no mapa global. Tente ser mais espec'#237'fico. Erro: ' + E);
     end
   );
+end;
+
+procedure TViewDashboard.OnHangarEditChange(Sender: TObject);
+begin 
+  FHangarAutocompleteTimer.Enabled := False; 
+  if FEditHangarAddress.Items.IndexOf(FEditHangarAddress.Text) >= 0 then Exit;
+  if Length(FEditHangarAddress.Text) >= 3 then FHangarAutocompleteTimer.Enabled := True; 
+end;
+
+procedure TViewDashboard.OnHangarAutocompleteTimer(Sender: TObject);
+begin
+  FHangarAutocompleteTimer.Enabled := False;
+  TMapService.SearchAddressSuggestionsAsync(FEditHangarAddress.Text, procedure(ASugg: TArray<string>)
+  var I: Integer; 
+      LMerged: string;
+      LSavedText: string;
+      LSavedSel: Integer;
+  begin 
+    LSavedText := FEditHangarAddress.Text;
+    LSavedSel := FEditHangarAddress.SelStart;
+    
+    FEditHangarAddress.OnChangeTracking := nil;
+    try
+      FEditHangarAddress.Items.Clear; 
+      for I := 0 to High(ASugg) do 
+      begin
+        FEditHangarAddress.Items.Add(ASugg[I]);
+      end;
+      FEditHangarAddress.Text := LSavedText;
+      FEditHangarAddress.SelStart := LSavedSel;
+
+      if Length(ASugg) > 0 then
+      begin
+        FEditHangarAddress.DropDown;
+        FEditHangarAddress.Text := LSavedText;
+        FEditHangarAddress.SelStart := LSavedSel;
+      end;
+    finally
+      FEditHangarAddress.OnChangeTracking := OnHangarEditChange;
+    end;
+  end, 
+  procedure(E: string) begin end);
+end;
+
+procedure TViewDashboard.OnHangarAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem);
+begin 
+  // No longer needed for ComboEdit
 end;
 
 end.

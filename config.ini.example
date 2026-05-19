@@ -1,0 +1,6 @@
+[Database]
+Host=localhost
+Port=5432
+Database=dronedelivery_db
+User=postgres
+Password=sua_senha_secreta_aqui

@@ -35,6 +35,7 @@ var
 begin
   LResponse := TRequest.New.BaseURL(FBaseURL + '/routes/calculate')
     .Accept('application/json')
+    .AcceptCharset('utf-8')
     .AddBody(ABodyJSON)
     .Post;
   Result := LResponse.Content;
@@ -46,6 +47,7 @@ var
 begin
   LResponse := TRequest.New.BaseURL(FBaseURL + '/drones/')
     .Accept('application/json')
+    .AcceptCharset('utf-8')
     .Get;
   Result := LResponse.Content;
 end;
@@ -61,6 +63,7 @@ begin
   
   LResponse := TRequest.New.BaseURL(LEndpoint)
     .Accept('application/json')
+    .AcceptCharset('utf-8')
     .Get;
   Result := LResponse.Content;
 end;

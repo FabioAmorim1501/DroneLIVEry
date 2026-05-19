@@ -1,15 +1,15 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{51EEA4D6-A0CE-43E9-80A6-D79869C9D1FB}</ProjectGuid>
         <MainSource>DroneDelivery.Client.dpr</MainSource>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <ProjectName Condition="'$(ProjectName)'==''">DroneDelivery.Client</ProjectName>
-        <TargetedPlatforms>32769</TargetedPlatforms>
+        <TargetedPlatforms>32771</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>FMX</FrameworkType>
         <ProjectVersion>20.1</ProjectVersion>
-        <Platform Condition="'$(Platform)'==''">Win32</Platform>
+        <Platform Condition="'$(Platform)'==''">Win64</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -45,6 +45,12 @@
         <Cfg_1>true</Cfg_1>
         <Base>true</Base>
     </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win64)'!=''">
+        <Cfg_1_Win64>true</Cfg_1_Win64>
+        <CfgParent>Cfg_1</CfgParent>
+        <Cfg_1>true</Cfg_1>
+        <Base>true</Base>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
         <Cfg_2>true</Cfg_2>
         <CfgParent>Base</CfgParent>
@@ -62,10 +68,16 @@
         <Cfg_2>true</Cfg_2>
         <Base>true</Base>
     </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win64)'!=''">
+        <Cfg_2_Win64>true</Cfg_2_Win64>
+        <CfgParent>Cfg_2</CfgParent>
+        <Cfg_2>true</Cfg_2>
+        <Base>true</Base>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_ExeOutput>..\..\bin\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_DcuOutput>..\..\dcu\$(Platform)\$(Config)</DCC_DcuOutput>
-        <DCC_UnitSearchPath>modules\restrequest4delphi\src;..\common;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\common;$(DCC_UnitSearchPath);..\modules\.dcp;..\modules\.dcu;..\modules;..\modules\jsondataobjects\Source;..\modules\jsondataobjects\UnitTest;modules\.dcp;modules\.dcu;modules;modules\jsondataobjects\Source;modules\jsondataobjects\UnitTest;modules\restrequest4delphi\src;..\modules\restrequest4delphi\src</DCC_UnitSearchPath>
         <DCC_E>false</DCC_E>
         <DCC_F>false</DCC_F>
         <DCC_K>false</DCC_K>
@@ -127,6 +139,12 @@
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
         <UWP_DelphiLogo44>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_44.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_150.png</UWP_DelphiLogo150>
+        <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
+        <BT_BuildType>Debug</BT_BuildType>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Locale>1033</VerInfo_Locale>
+        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
@@ -135,6 +153,9 @@
         <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+        <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
@@ -150,6 +171,9 @@
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
+        <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
+    </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
@@ -157,6 +181,7 @@
         <DCCReference Include="ViewModels\DroneDelivery.Client.ViewModel.Dashboard.pas"/>
         <DCCReference Include="Services\DroneDelivery.Client.Service.API.pas"/>
         <DCCReference Include="Services\DroneDelivery.Client.Service.Maps.pas"/>
+        <DCCReference Include="Components\DroneDelivery.Client.Component.Map.pas"/>
         <DCCReference Include="Views\DroneDelivery.Client.View.Dashboard.pas">
             <Form>ViewDashboard</Form>
         </DCCReference>
@@ -185,7 +210,7 @@
                 <Platform value="Android">False</Platform>
                 <Platform value="Android64">True</Platform>
                 <Platform value="Win32">True</Platform>
-                <Platform value="Win64">False</Platform>
+                <Platform value="Win64">True</Platform>
             </Platforms>
             <Deployment Version="4">
                 <DeployFile LocalName="$(BDS)\Redist\iossimulator\libcgunwind.1.0.dylib" Class="DependencyModule">

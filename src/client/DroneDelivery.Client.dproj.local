@@ -93,6 +93,8 @@
     <File Path="versionedparcelable-1.1.1.dex.jar"/>
     <File Path="viewpager-1.0.0.dex.jar"/>
     <File Path="work-runtime-2.7.0.dex.jar"/>
+    <File Path="Components"/>
+    <File Path="Components\DroneDelivery.Client.Component.Map.pas"/>
     <File Path="Services"/>
     <File Path="Services\DroneDelivery.Client.Service.API.pas"/>
     <File Path="Services\DroneDelivery.Client.Service.Maps.pas"/>
