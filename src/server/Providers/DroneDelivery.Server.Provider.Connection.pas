@@ -62,7 +62,7 @@ begin
       Writeln('------------------------------------------------');
       Writeln('  Testando as Credenciais do banco lidas do INI ');
       Writeln('  User_Name: [' + LIniFile.ReadString('Database', 'User', '') + ']');
-      Writeln('  Password:  [' + LIniFile.ReadString('Database', 'Password', '') + ']');
+      Writeln('  Password:  [***REDACTED***]');
       Writeln('------------------------------------------------');
       {$ENDIF}
 

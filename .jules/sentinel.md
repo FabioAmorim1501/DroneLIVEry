@@ -1,0 +1,4 @@
+## 2024-05-27 - [CRITICAL] Prevent Hardcoded Secrets and Passwords from Logging in Debug Mode
+**Vulnerability:** A plain-text database password was being logged to the console using `Writeln` during the database connection test (`$IFDEF DEBUG`) in `src/server/Providers/DroneDelivery.Server.Provider.Connection.pas`. This exposes sensitive credentials to any developer or automated log ingestion tool.
+**Learning:** Even within debugging modes, any explicit logging or dumping of variables containing passwords, tokens, or API keys creates an immediate security risk of leaking valid secrets.
+**Prevention:** Avoid writing explicit console/log outputs of sensitive string variables. Instead, use obfuscation like `[***REDACTED***]`, or do not log the property entirely. Always sanitize your debug trace statements.
