@@ -11,8 +11,6 @@ type
   private
     { Motor Matemático: Fórmula de Haversine para distâncias geográficas }
     function CalcularDistanciaKm(Lat1, Lon1, Lat2, Lon2: Double): Double;
-    { Varredura na lista de locais para resolver a integridade relacional do grafo }
-    function EncontrarLocal(ALocais: TObjectList<TLocalEntity>; AId: Integer): TLocalEntity;
   public
     { A assinatura agora requer ALocais para resolver as coordenadas do destino e do HUB }
     function CalcularMelhorRota(APedidos: TObjectList<TPedidoEntity>;
@@ -39,16 +37,6 @@ begin
   Result := Radius * C;
 end;
 
-function TServiceRotas.EncontrarLocal(ALocais: TObjectList<TLocalEntity>; AId: Integer): TLocalEntity;
-var
-  LLocal: TLocalEntity;
-begin
-  Result := nil;
-  for LLocal in ALocais do
-    if LLocal.Id = AId.ToString then
-      Exit(LLocal);
-end;
-
 function TServiceRotas.CalcularMelhorRota(APedidos: TObjectList<TPedidoEntity>;
   ADrones: TObjectList<TDroneEntity>; ALocais: TObjectList<TLocalEntity>): string;
 var
@@ -61,19 +49,20 @@ var
   LCurrentLat, LCurrentLng: Double;
   LCargaAtual, LDistanciaPercorrida: Double;
   LPedidosPendentes: TList<TPedidoEntity>;
+  LLocaisMap: TDictionary<string, TLocalEntity>;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
+  LLocaisMap := TDictionary<string, TLocalEntity>.Create;
   try
-    // 1. Localiza a Base Operacional (Hub)
+    // 1. Localiza a Base Operacional (Hub) e indexa os locais para O(1) lookup
     LLocalHub := nil;
     for LLocalDestino in ALocais do
     begin
+      LLocaisMap.AddOrSetValue(LLocalDestino.Id, LLocalDestino);
+
       if LLocalDestino.Tipo = ltBase then
-      begin
         LLocalHub := LLocalDestino;
-        Break;
-      end;
     end;
 
     if LLocalHub = nil then
@@ -104,9 +93,9 @@ begin
 
         for LPedido in LPedidosPendentes do
         begin
-          // Resolve o ID do Destino para obter as coordenadas geográficas
-          LLocalDestinoCandidato := EncontrarLocal(ALocais, LPedido.LocalDestinoId);
-          if LLocalDestinoCandidato = nil then Continue;
+          // Resolve o ID do Destino para obter as coordenadas geográficas em O(1)
+          if not LLocaisMap.TryGetValue(LPedido.LocalDestinoId.ToString, LLocalDestinoCandidato) then
+            Continue;
 
           LDistanciaAtePedido := CalcularDistanciaKm(LCurrentLat, LCurrentLng,
                                                      LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude);
@@ -168,6 +157,7 @@ begin
 
     Result := LArrayRotas.ToJSON;
   finally
+    LLocaisMap.Free;
     LPedidosPendentes.Free;
     LArrayRotas.Free;
   end;
