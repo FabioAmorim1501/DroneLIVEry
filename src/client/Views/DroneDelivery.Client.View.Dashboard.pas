@@ -226,6 +226,7 @@ begin
   Result.Text := AText;
   Result.XRadius := 6;
   Result.YRadius := 6;
+  Result.Cursor := crHandPoint;
 end;
 
 // ===========================================================================
@@ -257,6 +258,11 @@ begin
         if Assigned(FEditHangarAddress) then FEditHangarAddress.Text := LName;
       end);
   end).Start;
+
+  rctMenu1.Cursor := crHandPoint;
+  rctMenu2.Cursor := crHandPoint;
+  rctMenu3.Cursor := crHandPoint;
+  btnRefresh.Cursor := crHandPoint;
 
   SetActiveView(avFleet);
   btnRefreshClick(nil);
