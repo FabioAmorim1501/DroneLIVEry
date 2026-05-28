@@ -50,10 +50,12 @@ var
   LCargaAtual, LDistanciaPercorrida: Double;
   LPedidosPendentes: TList<TPedidoEntity>;
   LLocaisMap: TDictionary<string, TLocalEntity>;
+  LPedidoDestinos: TDictionary<TPedidoEntity, TLocalEntity>;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
   LLocaisMap := TDictionary<string, TLocalEntity>.Create;
+  LPedidoDestinos := TDictionary<TPedidoEntity, TLocalEntity>.Create;
   try
     // 1. Localiza a Base Operacional (Hub) e indexa os locais para O(1) lookup
     LLocalHub := nil;
@@ -70,7 +72,11 @@ begin
 
     // 2. Alimenta a fila de processamento em memória
     for LPedido in APedidos do
+    begin
       LPedidosPendentes.Add(LPedido);
+      if LLocaisMap.TryGetValue(LPedido.LocalDestinoId.ToString, LLocalDestinoCandidato) then
+        LPedidoDestinos.AddOrSetValue(LPedido, LLocalDestinoCandidato);
+    end;
 
     // 3. Orquestração da Frota
     for LDrone in ADrones do
@@ -93,8 +99,8 @@ begin
 
         for LPedido in LPedidosPendentes do
         begin
-          // Resolve o ID do Destino para obter as coordenadas geográficas em O(1)
-          if not LLocaisMap.TryGetValue(LPedido.LocalDestinoId.ToString, LLocalDestinoCandidato) then
+          // Resolve o ID do Destino em O(1) puro, sem conversão de string
+          if not LPedidoDestinos.TryGetValue(LPedido, LLocalDestinoCandidato) then
             Continue;
 
           LDistanciaAtePedido := CalcularDistanciaKm(LCurrentLat, LCurrentLng,
@@ -157,6 +163,7 @@ begin
 
     Result := LArrayRotas.ToJSON;
   finally
+    LPedidoDestinos.Free;
     LLocaisMap.Free;
     LPedidosPendentes.Free;
     LArrayRotas.Free;
