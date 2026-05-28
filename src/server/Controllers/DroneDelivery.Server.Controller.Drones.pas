@@ -64,6 +64,7 @@ var
   LRepo: TRepositoryDrone;
   LDrone: TDroneEntity;
   LBody: TJSONObject;
+  LObj: TJSONObject;
 begin
   LBody := Req.Body<TJSONObject>;
   if not Assigned(LBody) then begin Res.Status(400); Exit; end;
@@ -82,7 +83,14 @@ begin
     LRepo := TRepositoryDrone.Create;
     try
       LRepo.Insert(LDrone);
-      Res.Status(201).Send('{"message": "Drone Criado Localmente", "id": "' + LDrone.Id + '"}');
+      LObj := TJSONObject.Create;
+      try
+        LObj.AddPair('message', 'Drone Criado Localmente');
+        LObj.AddPair('id', LDrone.Id);
+        Res.Status(201).ContentType('application/json').Send(LObj.ToJSON);
+      finally
+        LObj.Free;
+      end;
     finally
       LRepo.Free;
     end;
@@ -172,6 +180,7 @@ var
   LDist: string;
   LDistVal: Double;
   LPrice: Double;
+  LObj: TJSONObject;
 begin
   LDist := Req.Query['distance_km'];
   LDist := StringReplace(LDist, ',', '.', [rfReplaceAll]);
@@ -181,7 +190,14 @@ begin
   // Preço Base R$ 10 + R$ 2.50 por Km
   LPrice := 10.0 + (LDistVal * 2.50);
   
-  Res.Status(200).ContentType('application/json').Send('{"distance_km": ' + LDist + ', "estimated_price": ' + FloatToStr(LPrice).Replace(',','.') + '}');
+  LObj := TJSONObject.Create;
+  try
+    LObj.AddPair('distance_km', TJSONNumber.Create(LDistVal));
+    LObj.AddPair('estimated_price', TJSONNumber.Create(LPrice));
+    Res.Status(200).ContentType('application/json').Send(LObj.ToJSON);
+  finally
+    LObj.Free;
+  end;
 end;
 
 procedure Registry;
