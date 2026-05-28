@@ -1,0 +1,3 @@
+## 2024-05-23 - FMX Label HitTest UX Pattern
+**Learning:** In Delphi FMX, when combining `TRectangle` and `TLabel` to create custom interactive button-like menu items with hover states and specific cursors (like `crHandPoint`), the child `TLabel` components can swallow mouse events (clicks and hovers) if their `HitTest` property is left as `True`. This prevents the cursor from changing properly and occasionally misses click events, resulting in poor UX.
+**Action:** When creating custom menu or button components with nested labels in FMX, always explicitly set `HitTest := False` on the child text elements so that mouse interactions correctly pass through to the parent container.
