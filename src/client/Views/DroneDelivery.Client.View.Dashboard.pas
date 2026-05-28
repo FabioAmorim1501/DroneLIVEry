@@ -264,6 +264,10 @@ begin
   rctMenu3.Cursor := crHandPoint;
   btnRefresh.Cursor := crHandPoint;
 
+  lblMenu1.HitTest := False;
+  lblMenu2.HitTest := False;
+  lblMenu3.HitTest := False;
+
   SetActiveView(avFleet);
   btnRefreshClick(nil);
 end;
@@ -476,6 +480,7 @@ procedure TViewDashboard.OnDroneActionClick(Sender: TObject);
 var LLblTitle, LLblSubtitle: TLabel;
 begin
   FModalOverlay := TRectangle.Create(Self); FModalOverlay.Parent := Self; FModalOverlay.Align := TAlignLayout.Contents; FModalOverlay.Fill.Color := $FF000000; FModalOverlay.Opacity := 0.5; FModalOverlay.Stroke.Kind := TBrushKind.None;
+  FModalOverlay.OnClick := ActionModalCloseClick;
   FModalPanel := TRectangle.Create(Self); FModalPanel.Parent := Self; FModalPanel.Width := 370; FModalPanel.Height := 240;
   FModalPanel.Position.X := (Self.ClientWidth - FModalPanel.Width) / 2; FModalPanel.Position.Y := (Self.ClientHeight - FModalPanel.Height) / 2;
   FModalPanel.Fill.Color := COLOR_WHITE; FModalPanel.XRadius := 12; FModalPanel.YRadius := 12; FModalPanel.Stroke.Kind := TBrushKind.None;
@@ -583,6 +588,7 @@ begin
   FComboDrone.Items.Add('(Selecione um drone)');
   FComboDrone.ItemIndex := 0;
   FComboDrone.OnChange := OnDroneComboChange;
+  FComboDrone.Cursor := crHandPoint;
 
   LLblHintDrone := MakeLabel(LPainelEsq, 'Acesse o menu para carregar a lista.', 10, COLOR_MUTED);
   LLblHintDrone.Align := TAlignLayout.Top;
