@@ -123,7 +123,15 @@ begin
       LDrone.Free;
     end
     else
-      Res.Status(404).Send('{"error": "Drone não encontrado no BD Local"}');
+    begin
+      LObj := TJSONObject.Create;
+      try
+        LObj.AddPair('error', 'Drone não encontrado no BD Local');
+        Res.Status(404).ContentType('application/json').Send(LObj.ToJSON);
+      finally
+        LObj.Free;
+      end;
+    end;
   finally
     LRepo.Free;
   end;
@@ -152,11 +160,27 @@ begin
       LDrone.Status := GetJsonString(LBody, 'status', LDrone.Status);
       
       LRepo.Update(LDrone);
-      Res.Status(200).Send('{"message": "Drone Atualizado no BD"}');
+
+      var LResObj := TJSONObject.Create;
+      try
+        LResObj.AddPair('message', 'Drone Atualizado no BD');
+        Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
+      finally
+        LResObj.Free;
+      end;
+
       LDrone.Free;
     end
     else
-      Res.Status(404).Send('{"error": "Drone não encontrado"}');
+    begin
+      var LResErr := TJSONObject.Create;
+      try
+        LResErr.AddPair('error', 'Drone não encontrado');
+        Res.Status(404).ContentType('application/json').Send(LResErr.ToJSON);
+      finally
+        LResErr.Free;
+      end;
+    end;
   finally
     LRepo.Free;
   end;
@@ -169,7 +193,13 @@ begin
   LRepo := TRepositoryDrone.Create;
   try
     LRepo.Delete(Req.Params['drone_id']);
-    Res.Status(200).Send('{"message": "Drone Deletado do BD"}');
+    var LResObj := TJSONObject.Create;
+    try
+      LResObj.AddPair('message', 'Drone Deletado do BD');
+      Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
+    finally
+      LResObj.Free;
+    end;
   finally
     LRepo.Free;
   end;
