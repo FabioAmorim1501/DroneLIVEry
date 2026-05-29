@@ -113,6 +113,7 @@ type
     procedure BuildOpsView;
     procedure AddWaypointToMap(const AAddress: string; ALat, ALng: Double);
     procedure RefreshMapRoute;
+    procedure ActionWaypointKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
     procedure OnAddWaypointClick(Sender: TObject);
     procedure OnClearRouteClick(Sender: TObject);
     procedure OnCalculateRouteClick(Sender: TObject);
@@ -122,6 +123,7 @@ type
     procedure OnHangarEditChange(Sender: TObject);
     procedure OnHangarAutocompleteTimer(Sender: TObject);
     procedure OnHangarAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem);
+    procedure ActionHangarKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
 
     { --- Módulo: CRUD / Estação --- }
     procedure BuildCrudView;
@@ -568,6 +570,7 @@ begin
   FEditWaypoint.Margins.Rect := TRectF.Create(12, 5, 12, 5);
   FEditWaypoint.Position.Y := 40;
   FEditWaypoint.OnChangeTracking := OnWaypointEditChange;
+  FEditWaypoint.OnKeyDown := ActionWaypointKeyDown;
 
   FAutocompleteTimer := TTimer.Create(Self);
   FAutocompleteTimer.Interval := 400;
@@ -683,7 +686,8 @@ end;
 
 procedure TViewDashboard.OnAddWaypointClick(Sender: TObject);
 begin
-  TMapService.GeocodeAddressAsync(FEditWaypoint.Text, procedure(Lat, Lng: Double) begin AddWaypointToMap(FEditWaypoint.Text, Lat, Lng); FEditWaypoint.Text := ''; end, procedure(E: string) begin FLblMapStatus.Text := E; end);
+  if FEditWaypoint.Text.Trim.IsEmpty then Exit;
+  TMapService.GeocodeAddressAsync(FEditWaypoint.Text, procedure(Lat, Lng: Double) begin AddWaypointToMap(FEditWaypoint.Text, Lat, Lng); FEditWaypoint.Text := ''; FEditWaypoint.SetFocus; end, procedure(E: string) begin FLblMapStatus.Text := E; end);
 end;
 
 procedure TViewDashboard.AddWaypointToMap(const AAddress: string; ALat, ALng: Double);
@@ -711,7 +715,8 @@ end;
 procedure TViewDashboard.OnCalculateRouteClick(Sender: TObject);
 begin
   if FSelectedDroneId.IsEmpty then Exit;
-  FViewModel.CalcularRota(FSelectedDroneId, FWaypoints, procedure(Resp: string) begin EnviarRotaAoMapa(Resp); end, procedure(E: string) begin FLblMapStatus.Text := E; end);
+  FLblMapStatus.Text := 'Calculando...';
+  FViewModel.CalcularRota(FSelectedDroneId, FWaypoints, procedure(Resp: string) begin FLblMapStatus.Text := 'Rota calculada com sucesso.'; EnviarRotaAoMapa(Resp); end, procedure(E: string) begin FLblMapStatus.Text := E; end);
 end;
 
 procedure TViewDashboard.OnBtnZoomInClick(Sender: TObject);
@@ -847,6 +852,7 @@ begin
   FEditHangarAddress.Margins.Rect := TRectF.Create(16, 8, 16, 0);
   FEditHangarAddress.Position.Y := 40;
   FEditHangarAddress.OnChangeTracking := OnHangarEditChange;
+  FEditHangarAddress.OnKeyDown := ActionHangarKeyDown;
 
   FHangarAutocompleteTimer := TTimer.Create(Self);
   FHangarAutocompleteTimer.Interval := 400;
@@ -964,6 +970,16 @@ end;
 procedure TViewDashboard.OnHangarAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem);
 begin 
   // No longer needed for ComboEdit
+end;
+
+procedure TViewDashboard.ActionWaypointKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
+begin
+  if Key = vkReturn then OnAddWaypointClick(FEditWaypoint);
+end;
+
+procedure TViewDashboard.ActionHangarKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
+begin
+  if Key = vkReturn then OnSaveHangarClick(FEditHangarAddress);
 end;
 
 end.
