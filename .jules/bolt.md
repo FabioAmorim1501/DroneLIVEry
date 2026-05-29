@@ -1,3 +1,3 @@
-## 2024-05-27 - O(N) Location Lookup Optimization in Nearest Neighbor Algorithm
-**Learning:** In routing algorithms like Nearest Neighbor, resolving entity relations using sequential search (O(N)) inside a tight loop creates an O(N*M) bottleneck, particularly evident when string conversion is involved on every iteration.
-**Action:** Always pre-compute relational lookups into an O(1) Hash Map/Dictionary before entering complex nesting or graph-traversal algorithms.
+## 2024-05-24 - Avoid O(N²) SetLength reallocations in Delphi
+**Learning:** Found an O(N²) anti-pattern in the codebase where arrays were being constantly reallocated inside loops using `SetLength(Array, Length(Array) + 1)`. This is highly inefficient in Delphi as it triggers constant memory reallocation as the dataset grows.
+**Action:** When building collections iteratively in Delphi, always use pre-allocation (if the final size is known upfront, like parsing JSON arrays using `.Count`) or use `TList<T>` from `System.Generics.Collections` with the `.ToArray` method when building arrays dynamically from a database query.

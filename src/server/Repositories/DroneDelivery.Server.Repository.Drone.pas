@@ -6,7 +6,8 @@ uses
   DroneDelivery.Domain.Interfaces,
   DroneDelivery.Domain.Entities,
   DroneDelivery.Server.Provider.Connection,
-  FireDAC.Comp.Client;
+  FireDAC.Comp.Client,
+  System.Generics.Collections;
 
 type
   TRepositoryDrone = class(TInterfacedObject, IRepository<TDroneEntity>)
@@ -49,30 +50,38 @@ function TRepositoryDrone.GetAll: TArray<TDroneEntity>;
 var
   Qry: TFDQuery;
   LDrone: TDroneEntity;
+  LList: TList<TDroneEntity>;
 begin
-  SetLength(Result, 0);
-  Qry := TFDQuery.Create(nil);
+  // ⚡ Bolt: Performance Fix - Replaced O(N^2) inline SetLength with TList<T> buffering.
+  // Converting to array at the end changes memory operations from quadratic to amortized O(N),
+  // drastically improving query mapping time for large datasets.
+  LList := TList<TDroneEntity>.Create;
   try
-    Qry.Connection := FConn;
-    Qry.SQL.Text := 'SELECT * FROM drones';
-    Qry.Open;
-    while not Qry.Eof do
-    begin
-      LDrone := TDroneEntity.Create;
-      LDrone.Id := Qry.FieldByName('id').AsString;
-      LDrone.Nome := Qry.FieldByName('name').AsString;
-      LDrone.PayloadMaximo := Qry.FieldByName('max_payload_kg').AsFloat;
-      LDrone.AutonomiaKm := Qry.FieldByName('max_range_km').AsFloat;
-      LDrone.BatteryWh := Qry.FieldByName('battery_wh').AsFloat;
-      LDrone.VelocidadeKmH := Qry.FieldByName('speed_kmh').AsFloat;
-      LDrone.ImageUrl := Qry.FieldByName('image_url').AsString;
-      LDrone.Status := Qry.FieldByName('status').AsString;
-      SetLength(Result, Length(Result) + 1);
-      Result[High(Result)] := LDrone;
-      Qry.Next;
+    Qry := TFDQuery.Create(nil);
+    try
+      Qry.Connection := FConn;
+      Qry.SQL.Text := 'SELECT * FROM drones';
+      Qry.Open;
+      while not Qry.Eof do
+      begin
+        LDrone := TDroneEntity.Create;
+        LDrone.Id := Qry.FieldByName('id').AsString;
+        LDrone.Nome := Qry.FieldByName('name').AsString;
+        LDrone.PayloadMaximo := Qry.FieldByName('max_payload_kg').AsFloat;
+        LDrone.AutonomiaKm := Qry.FieldByName('max_range_km').AsFloat;
+        LDrone.BatteryWh := Qry.FieldByName('battery_wh').AsFloat;
+        LDrone.VelocidadeKmH := Qry.FieldByName('speed_kmh').AsFloat;
+        LDrone.ImageUrl := Qry.FieldByName('image_url').AsString;
+        LDrone.Status := Qry.FieldByName('status').AsString;
+        LList.Add(LDrone);
+        Qry.Next;
+      end;
+    finally
+      Qry.Free;
     end;
+    Result := LList.ToArray;
   finally
-    Qry.Free;
+    LList.Free;
   end;
 end;
 

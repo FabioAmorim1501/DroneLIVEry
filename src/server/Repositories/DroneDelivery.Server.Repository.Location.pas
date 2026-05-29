@@ -6,7 +6,8 @@ uses
   DroneDelivery.Domain.Interfaces,
   DroneDelivery.Domain.Entities,
   DroneDelivery.Server.Provider.Connection,
-  FireDAC.Comp.Client;
+  FireDAC.Comp.Client,
+  System.Generics.Collections;
 
 type
   TRepositoryLocation = class(TInterfacedObject, IRepository<TLocalEntity>)
@@ -49,28 +50,36 @@ function TRepositoryLocation.GetAll: TArray<TLocalEntity>;
 var
   Qry: TFDQuery;
   LLocal: TLocalEntity;
+  LList: TList<TLocalEntity>;
 begin
-  SetLength(Result, 0);
-  Qry := TFDQuery.Create(nil);
+  // ⚡ Bolt: Performance Fix - Replaced O(N^2) inline SetLength with TList<T> buffering.
+  // Converting to array at the end changes memory operations from quadratic to amortized O(N),
+  // drastically improving query mapping time for large datasets.
+  LList := TList<TLocalEntity>.Create;
   try
-    Qry.Connection := FConn;
-    Qry.SQL.Text := 'SELECT * FROM locations';
-    Qry.Open;
-    while not Qry.Eof do
-    begin
-      LLocal := TLocalEntity.Create;
-      LLocal.Id := Qry.FieldByName('id').AsString;
-      LLocal.Nome := Qry.FieldByName('name').AsString;
-      LLocal.Latitude := Qry.FieldByName('latitude').AsFloat;
-      LLocal.Longitude := Qry.FieldByName('longitude').AsFloat;
-      if Qry.FieldByName('loc_type').AsString = 'base' then LLocal.Tipo := ltBase else LLocal.Tipo := ltCliente;
-      
-      SetLength(Result, Length(Result) + 1);
-      Result[High(Result)] := LLocal;
-      Qry.Next;
+    Qry := TFDQuery.Create(nil);
+    try
+      Qry.Connection := FConn;
+      Qry.SQL.Text := 'SELECT * FROM locations';
+      Qry.Open;
+      while not Qry.Eof do
+      begin
+        LLocal := TLocalEntity.Create;
+        LLocal.Id := Qry.FieldByName('id').AsString;
+        LLocal.Nome := Qry.FieldByName('name').AsString;
+        LLocal.Latitude := Qry.FieldByName('latitude').AsFloat;
+        LLocal.Longitude := Qry.FieldByName('longitude').AsFloat;
+        if Qry.FieldByName('loc_type').AsString = 'base' then LLocal.Tipo := ltBase else LLocal.Tipo := ltCliente;
+
+        LList.Add(LLocal);
+        Qry.Next;
+      end;
+    finally
+      Qry.Free;
     end;
+    Result := LList.ToArray;
   finally
-    Qry.Free;
+    LList.Free;
   end;
 end;
 
