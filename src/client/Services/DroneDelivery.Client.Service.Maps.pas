@@ -164,12 +164,13 @@ begin
                 LJsonArr := LJsonObj.GetValue('candidates') as TJSONArray;
                 if Assigned(LJsonArr) then
                 begin
-                  SetLength(LSuggestions, 0);
+                  // ⚡ Bolt: Performance Fix - Changed O(N^2) dynamic SetLength inside loop to O(N) pre-allocation.
+                  // Reduces redundant memory reallocations, improving JSON parsing speed for large address sets.
+                  SetLength(LSuggestions, LJsonArr.Count);
                   for I := 0 to LJsonArr.Count - 1 do
                   begin
                     LInner := LJsonArr.Items[I] as TJSONObject;
-                    SetLength(LSuggestions, Length(LSuggestions) + 1);
-                    LSuggestions[High(LSuggestions)] := LInner.GetValue<string>('address');
+                    LSuggestions[I] := LInner.GetValue<string>('address');
                   end;
                   TThread.Queue(nil, procedure begin AOnSuccess(LSuggestions); end);
                 end else
