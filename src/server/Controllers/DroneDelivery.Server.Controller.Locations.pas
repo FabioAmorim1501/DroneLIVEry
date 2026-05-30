@@ -84,7 +84,8 @@ begin
   except
     on E: Exception do
     begin
-      Res.Status(500).Send('{"error": "' + E.Message.Replace('"', '\"') + '"}');
+      // Do not expose internal exception messages to the client
+      Res.Status(500).Send('{"error": "Internal Server Error"}');
     end;
   end;
 end;
