@@ -164,12 +164,11 @@ begin
                 LJsonArr := LJsonObj.GetValue('candidates') as TJSONArray;
                 if Assigned(LJsonArr) then
                 begin
-                  SetLength(LSuggestions, 0);
+                  SetLength(LSuggestions, LJsonArr.Count);
                   for I := 0 to LJsonArr.Count - 1 do
                   begin
                     LInner := LJsonArr.Items[I] as TJSONObject;
-                    SetLength(LSuggestions, Length(LSuggestions) + 1);
-                    LSuggestions[High(LSuggestions)] := LInner.GetValue<string>('address');
+                    LSuggestions[I] := LInner.GetValue<string>('address');
                   end;
                   TThread.Queue(nil, procedure begin AOnSuccess(LSuggestions); end);
                 end else
