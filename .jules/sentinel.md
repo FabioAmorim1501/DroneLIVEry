@@ -10,3 +10,7 @@
 **Vulnerability:** Internal exception messages (`E.Message`) were being exposed to the client in HTTP 500 error responses in `src/server/Controllers/DroneDelivery.Server.Controller.Locations.pas`.
 **Learning:** Exposing raw exception strings can leak internal system details, database structures, or application state to attackers, which aids in reconnaissance and exploitation.
 **Prevention:** Always use safe, generic error messages for client-facing 500 responses (e.g., `{"error": "Internal Server Error"}`). Only log the actual exception details internally.
+## 2024-05-28 - [HIGH] Prevent DOM-Based XSS in WebViews
+**Vulnerability:** In `src/client/mapa.html`, dynamic drone or location labels were injected directly into the DOM using string interpolation (`<b>${p.label}</b>`) without sanitization. If a label contains malicious script tags (e.g., from a compromised database entry), it will execute within the context of the user's local WebView component.
+**Learning:** Embedded WebViews rendering dynamic content are just as vulnerable to Cross-Site Scripting (XSS) as standard web applications. Unsanitized strings concatenated into HTML structures provide an execution path for malicious payloads.
+**Prevention:** Always sanitize or escape HTML entities before dynamically inserting user-controlled strings into the DOM. Use an `escapeHtml` function to safely convert dangerous characters (`<`, `>`, `&`, `"`, `'`).

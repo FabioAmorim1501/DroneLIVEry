@@ -165,6 +165,16 @@
             map.setView([lat, lng], zoom || 14, { animate: true, duration: 1 });
         }
 
+        // --- Security Utilities ---
+        function escapeHtml(unsafe) {
+            return (unsafe || '').toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         // --- Drone Specific Logic Wrapper ---
         // Expected payload: [ {lat: ..., lng: ..., label: "...", battery: 100}, ... ]
         function drawMission(pointsJson) {
@@ -188,7 +198,8 @@
                                  ? `<span class="bat-badge ${batClass}">⚡ ${p.battery.toFixed(1)}%</span>` 
                                  : '';
                     
-                    var popupHtml = `<b>${p.label}</b>${batStr}`;
+                    var safeLabel = escapeHtml(p.label);
+                    var popupHtml = `<b>${safeLabel}</b>${batStr}`;
                     
                     var isHub = (index === 0 || index === points.length - 1);
                     var iconUrl = isHub 
