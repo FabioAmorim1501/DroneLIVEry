@@ -198,6 +198,7 @@ function MakeLabel(AParent: TFmxObject; const AText: string; AFontSize: Single;
 begin
   Result := TLabel.Create(AParent);
   Result.Parent := AParent;
+  Result.HitTest := False;
   Result.Font.Size := AFontSize;
   Result.TextSettings.FontColor := AColor;
   if ABold then Result.Font.Style := [TFontStyle.fsBold] else Result.Font.Style := [];
@@ -689,7 +690,8 @@ begin
   if Key = vkReturn then
   begin
     OnAddWaypointClick(nil);
-    FEditWaypoint.SetFocus;
+    if Assigned(FEditWaypoint) and FEditWaypoint.CanFocus then
+      FEditWaypoint.SetFocus;
   end;
 end;
 
@@ -919,7 +921,8 @@ begin
   if Key = vkReturn then
   begin
     OnSaveHangarClick(nil);
-    FEditHangarAddress.SetFocus;
+    if Assigned(FEditHangarAddress) and FEditHangarAddress.CanFocus then
+      FEditHangarAddress.SetFocus;
   end;
 end;
 
