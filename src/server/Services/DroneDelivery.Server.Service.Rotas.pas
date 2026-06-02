@@ -51,6 +51,7 @@ var
   LPedidosPendentes: TList<TPedidoEntity>;
   LLocaisMap: TDictionary<string, TLocalEntity>;
   LPedidoDestinos: TDictionary<TPedidoEntity, TLocalEntity>;
+  I, LIndexMaisProximo: Integer;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
@@ -96,9 +97,17 @@ begin
         LMenorDistancia := MaxDouble;
         LPedidoMaisProximo := nil;
         LLocalDestino := nil;
+        LIndexMaisProximo := -1;
 
-        for LPedido in LPedidosPendentes do
+        for I := 0 to LPedidosPendentes.Count - 1 do
         begin
+          LPedido := LPedidosPendentes[I];
+
+          // ⚡ Bolt: Fast-path rejection. Se o peso do pedido já excede a capacidade atual,
+          // ignora antes de realizar operações trigonométricas pesadas ou buscas adicionais
+          if LCargaAtual + LPedido.PesoLiquido > LDrone.PayloadMaximo then
+            Continue;
+
           // Resolve o ID do Destino em O(1) puro, sem conversão de string
           if not LPedidoDestinos.TryGetValue(LPedido, LLocalDestinoCandidato) then
             Continue;
@@ -112,13 +121,13 @@ begin
             LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
                                                       LLocalHub.Latitude, LLocalHub.Longitude);
 
-            // Validação absoluta das restrições de engenharia da aeronave
-            if (LCargaAtual + LPedido.PesoLiquido <= LDrone.PayloadMaximo) and
-               (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
+            // Validação absoluta das restrições de engenharia da aeronave (Payload já verificado)
+            if (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
             begin
               LMenorDistancia := LDistanciaAtePedido;
               LPedidoMaisProximo := LPedido;
               LLocalDestino := LLocalDestinoCandidato;
+              LIndexMaisProximo := I;
             end;
           end;
         end;
@@ -126,8 +135,14 @@ begin
         // Se a aeronave atingiu a capacidade máxima (peso ou bateria), encerra o turno deste drone
         if LPedidoMaisProximo = nil then Break;
 
-        // Efetiva a alocação e desconta recursos
-        LPedidosPendentes.Remove(LPedidoMaisProximo);
+        // ⚡ Bolt: Efetiva a alocação e desconta recursos
+        // Substitui .Remove() por Swap-and-Pop O(1) para evitar shift no array interno
+        if LIndexMaisProximo >= 0 then
+        begin
+          LPedidosPendentes[LIndexMaisProximo] := LPedidosPendentes[LPedidosPendentes.Count - 1];
+          LPedidosPendentes.Delete(LPedidosPendentes.Count - 1);
+        end;
+
         LCargaAtual := LCargaAtual + LPedidoMaisProximo.PesoLiquido;
         LDistanciaPercorrida := LDistanciaPercorrida + LMenorDistancia;
         LCurrentLat := LLocalDestino.Latitude;

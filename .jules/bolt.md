@@ -6,6 +6,14 @@
 **Learning:** In routing algorithms like Nearest Neighbor, resolving entity relations using sequential search (O(N)) inside a tight loop creates an O(N*M) bottleneck, particularly evident when string conversion is involved on every iteration.
 **Action:** Always pre-compute relational lookups into an O(1) Hash Map/Dictionary before entering complex nesting or graph-traversal algorithms.
 
-## 2026-05-30 - Array Reallocation Overhead in Delphi Loops
+## 2024-05-30 - Array Reallocation Overhead in Delphi Loops
 **Learning:** Using `SetLength(Array, Length(Array) + 1)` inside loops causes O(N^2) memory reallocation overhead as Delphi creates a new block and copies the array each time. This creates a severe performance bottleneck for large datasets (e.g., retrieving lists from DB repositories).
 **Action:** When array size is known in advance, pre-allocate `SetLength(Array, Count)`. When size is unknown (e.g., iterating a database query), buffer the elements using `System.Generics.Collections.TList<T>`, then call `.ToArray()` at the end of the loop.
+
+## 2024-05-30 - O(N^2) Removal in Routing Algorithm
+**Learning:** Using `TList<T>.Remove()` inside the Nearest Neighbor routing loop created an O(N^2) bottleneck because it causes internal search and shift operations for each order assigned.
+**Action:** When element order doesn't matter, replace `Remove()` with O(1) Swap-and-Pop: `List[Index] := List[List.Count - 1]; List.Delete(List.Count - 1);`.
+
+## 2024-05-30 - Short-circuiting Expensive Math in Loops
+**Learning:** Haversine distance functions are computationally heavy (trigonometry). Calculating them before checking simple business logic rules (like weight capacity) wastes CPU cycles.
+**Action:** Always place lightweight constraints (e.g., `Weight > MaxPayload`) before expensive mathematical functions inside large loops to short-circuit execution.
