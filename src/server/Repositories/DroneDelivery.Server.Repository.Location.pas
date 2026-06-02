@@ -52,9 +52,6 @@ var
   LLocal: TLocalEntity;
   LList: TList<TLocalEntity>;
 begin
-  // ⚡ Bolt: Performance Fix - Replaced O(N^2) inline SetLength with TList<T> buffering.
-  // Converting to array at the end changes memory operations from quadratic to amortized O(N),
-  // drastically improving query mapping time for large datasets.
   LList := TList<TLocalEntity>.Create;
   try
     Qry := TFDQuery.Create(nil);
@@ -74,6 +71,7 @@ begin
         LList.Add(LLocal);
         Qry.Next;
       end;
+      Result := LList.ToArray;
     finally
       Qry.Free;
     end;

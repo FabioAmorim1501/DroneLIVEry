@@ -164,8 +164,6 @@ begin
                 LJsonArr := LJsonObj.GetValue('candidates') as TJSONArray;
                 if Assigned(LJsonArr) then
                 begin
-                  // ⚡ Bolt: Performance Fix - Changed O(N^2) dynamic SetLength inside loop to O(N) pre-allocation.
-                  // Reduces redundant memory reallocations, improving JSON parsing speed for large address sets.
                   SetLength(LSuggestions, LJsonArr.Count);
                   for I := 0 to LJsonArr.Count - 1 do
                   begin
