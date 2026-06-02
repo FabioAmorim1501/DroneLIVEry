@@ -100,13 +100,8 @@ begin
   except
     on E: Exception do
     begin
-      var LResErr := TJSONObject.Create;
-      try
-        LResErr.AddPair('error', 'Internal Server Error');
-        Res.Status(500).ContentType('application/json').Send(LResErr.ToJSON);
-      finally
-        LResErr.Free;
-      end;
+      // Do not expose internal exception messages to the client
+      Res.Status(500).Send('{"error": "Internal Server Error"}');
     end;
   end;
 end;
