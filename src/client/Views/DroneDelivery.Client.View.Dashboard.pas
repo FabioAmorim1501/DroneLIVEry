@@ -476,7 +476,14 @@ begin
 end;
 
 procedure TViewDashboard.ActionModalKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
-begin if Key = vkReturn then ActionModalConfirmClick(FModalBtnConfirm); end;
+begin
+  if Key = vkReturn then
+  begin
+    ActionModalConfirmClick(FModalBtnConfirm);
+    if Assigned(FModalEditDist) and FModalEditDist.CanFocus then
+      FModalEditDist.SetFocus;
+  end;
+end;
 
 procedure TViewDashboard.OnDroneActionClick(Sender: TObject);
 var LLblTitle, LLblSubtitle: TLabel;
@@ -689,7 +696,8 @@ begin
   if Key = vkReturn then
   begin
     OnAddWaypointClick(nil);
-    FEditWaypoint.SetFocus;
+    if Assigned(FEditWaypoint) and FEditWaypoint.CanFocus then
+      FEditWaypoint.SetFocus;
   end;
 end;
 
@@ -919,7 +927,8 @@ begin
   if Key = vkReturn then
   begin
     OnSaveHangarClick(nil);
-    FEditHangarAddress.SetFocus;
+    if Assigned(FEditHangarAddress) and FEditHangarAddress.CanFocus then
+      FEditHangarAddress.SetFocus;
   end;
 end;
 
