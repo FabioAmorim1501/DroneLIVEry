@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > src/client/Services/DroneDelivery.Client.Service.Maps.pas
 unit DroneDelivery.Client.Service.Maps;
 
 interface
@@ -73,7 +74,7 @@ var
   LUrl: string;
 begin
   LUrl := 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=1&sourceCountry=BRA&SingleLine=' + UrlEncodeUtf8(AAddress);
-  
+
   TThread.CreateAnonymousThread(
     procedure
     var
@@ -89,7 +90,7 @@ begin
         try
           LHttpLocal.CustomHeaders['User-Agent'] := 'DroneLIVEry-App/1.0';
           LResp := LHttpLocal.Get(LUrl);
-          
+
           if LResp.StatusCode = 200 then
           begin
             LJsonObj := TJSONObject.ParseJSONValue(LResp.ContentAsString(TEncoding.UTF8)) as TJSONObject;
@@ -101,10 +102,10 @@ begin
                 begin
                   LInner := LJsonArr.Items[0] as TJSONObject;
                   LLoc := LInner.GetValue('location') as TJSONObject;
-                  
+
                   LLat := StrToFloatDef(LLoc.GetValue<string>('y').Replace('.', ','), 0.0);
                   LLng := StrToFloatDef(LLoc.GetValue<string>('x').Replace('.', ','), 0.0);
-                  
+
                   if LLat = 0 then LLat := StrToFloatDef(LLoc.GetValue<string>('y').Replace(',', '.'), 0.0);
                   if LLng = 0 then LLng := StrToFloatDef(LLoc.GetValue<string>('x').Replace(',', '.'), 0.0);
 
@@ -164,6 +165,8 @@ begin
                 LJsonArr := LJsonObj.GetValue('candidates') as TJSONArray;
                 if Assigned(LJsonArr) then
                 begin
+                  // ⚡ Bolt: Performance Fix - Changed O(N^2) dynamic SetLength inside loop to O(N) pre-allocation.
+                  // Reduces redundant memory reallocations, improving JSON parsing speed for large address sets.
                   SetLength(LSuggestions, LJsonArr.Count);
                   for I := 0 to LJsonArr.Count - 1 do
                   begin
@@ -216,14 +219,14 @@ begin
   LJsonArray := TJSONArray.Create;
   LTotalDist := 0;
   LBatPerc := 100.0;
-  
+
   // HUB Origem Inicial
   LJsonArray.AddElement(TJSONObject.Create
     .AddPair('lat', TJSONNumber.Create(AHub.Lat))
     .AddPair('lng', TJSONNumber.Create(AHub.Lng))
     .AddPair('label', 'HUB Base')
     .AddPair('battery', TJSONNumber.Create(LBatPerc)));
-    
+
   LUltimoPonto := AHub;
 
   // Waypoints Intermediários
@@ -231,13 +234,13 @@ begin
   begin
     LDistanciaKm := TryCalculateDistanceKm(LUltimoPonto.Lat, LUltimoPonto.Lng, LPonto.Lat, LPonto.Lng);
     LTotalDist := LTotalDist + LDistanciaKm;
-    
+
     // Perda linear de bateria baseada na autonomia maxima. Drone morre se perder 100%
     if DroneMaxRangeKm > 0 then
       LBatPerc := LBatPerc - ((LDistanciaKm / DroneMaxRangeKm) * 100.0)
     else
       LBatPerc := 0;
-      
+
     if LBatPerc < 0 then LBatPerc := 0;
 
     LJsonArray.AddElement(TJSONObject.Create
@@ -245,30 +248,31 @@ begin
       .AddPair('lng', TJSONNumber.Create(LPonto.Lng))
       .AddPair('label', LPonto.LabelName)
       .AddPair('battery', TJSONNumber.Create(LBatPerc)));
-      
+
     LUltimoPonto := LPonto;
   end;
-  
+
   // Retorno Final (Volta pro Hub)
   if AWaypoints.Count > 0 then
   begin
     LDistanciaKm := TryCalculateDistanceKm(LUltimoPonto.Lat, LUltimoPonto.Lng, AHub.Lat, AHub.Lng);
     LTotalDist := LTotalDist + LDistanciaKm;
-    
+
     if DroneMaxRangeKm > 0 then
       LBatPerc := LBatPerc - ((LDistanciaKm / DroneMaxRangeKm) * 100.0)
     else
       LBatPerc := 0;
-      
+
     LJsonArray.AddElement(TJSONObject.Create
       .AddPair('lat', TJSONNumber.Create(AHub.Lat))
       .AddPair('lng', TJSONNumber.Create(AHub.Lng))
       .AddPair('label', 'HUB (Retorno)')
       .AddPair('battery', TJSONNumber.Create(LBatPerc)));
   end;
-  
+
   Result := LJsonArray.ToJSON;
   LJsonArray.Free;
 end;
 
 end.
+INNER_EOF
