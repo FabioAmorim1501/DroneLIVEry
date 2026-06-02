@@ -114,6 +114,7 @@ type
     procedure AddWaypointToMap(const AAddress: string; ALat, ALng: Double);
     procedure RefreshMapRoute;
     procedure OnAddWaypointClick(Sender: TObject);
+    procedure OnWaypointKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
     procedure OnClearRouteClick(Sender: TObject);
     procedure OnCalculateRouteClick(Sender: TObject);
     procedure OnWaypointEditChange(Sender: TObject);
@@ -130,6 +131,7 @@ type
     procedure OnBtnZoomOutClick(Sender: TObject);
     procedure OnSaveDroneClick(Sender: TObject);
     procedure OnSaveHangarClick(Sender: TObject);
+    procedure OnHangarKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
     procedure EnviarRotaAoMapa(const AJsonPontos: string);
     procedure ProcessHangarSave(const AAddr: string; ALat, ALng: Double);
 
@@ -568,6 +570,7 @@ begin
   FEditWaypoint.Margins.Rect := TRectF.Create(12, 5, 12, 5);
   FEditWaypoint.Position.Y := 40;
   FEditWaypoint.OnChangeTracking := OnWaypointEditChange;
+  FEditWaypoint.OnKeyDown := OnWaypointKeyDown;
 
   FAutocompleteTimer := TTimer.Create(Self);
   FAutocompleteTimer.Interval := 400;
@@ -679,6 +682,15 @@ end;
 procedure TViewDashboard.OnAutocompleteSelect(const Sender: TCustomListBox; const Item: TListBoxItem);
 begin 
   // No longer needed for ComboEdit
+end;
+
+procedure TViewDashboard.OnWaypointKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
+begin
+  if Key = vkReturn then
+  begin
+    OnAddWaypointClick(nil);
+    FEditWaypoint.SetFocus;
+  end;
 end;
 
 procedure TViewDashboard.OnAddWaypointClick(Sender: TObject);
@@ -847,6 +859,7 @@ begin
   FEditHangarAddress.Margins.Rect := TRectF.Create(16, 8, 16, 0);
   FEditHangarAddress.Position.Y := 40;
   FEditHangarAddress.OnChangeTracking := OnHangarEditChange;
+  FEditHangarAddress.OnKeyDown := OnHangarKeyDown;
 
   FHangarAutocompleteTimer := TTimer.Create(Self);
   FHangarAutocompleteTimer.Interval := 400;
@@ -899,6 +912,15 @@ begin
         ShowMessage('Aviso: O local do Hub foi atualizado no mapa, mas houve falha de conex'#227'o ao gravar no Backend.');
     end);
   end).Start;
+end;
+
+procedure TViewDashboard.OnHangarKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
+begin
+  if Key = vkReturn then
+  begin
+    OnSaveHangarClick(nil);
+    FEditHangarAddress.SetFocus;
+  end;
 end;
 
 procedure TViewDashboard.OnSaveHangarClick(Sender: TObject);
