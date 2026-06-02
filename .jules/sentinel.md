@@ -10,3 +10,7 @@
 **Vulnerability:** Internal exception messages (`E.Message`) were being exposed to the client in HTTP 500 error responses in `src/server/Controllers/DroneDelivery.Server.Controller.Locations.pas`.
 **Learning:** Exposing raw exception strings can leak internal system details, database structures, or application state to attackers, which aids in reconnaissance and exploitation.
 **Prevention:** Always use safe, generic error messages for client-facing 500 responses (e.g., `{"error": "Internal Server Error"}`). Only log the actual exception details internally.
+## 2024-06-02 - [HIGH] Prevent DOM-based XSS in Map View
+**Vulnerability:** User-controlled strings (`p.label`) were injected directly into an HTML string for Leaflet Map popups in `src/client/mapa.html` via template literals.
+**Learning:** Client-side rendering via template literals can result in DOM-based XSS when data is populated from external sources without HTML entity escaping.
+**Prevention:** Always implement an explicit HTML escaping function (`escapeHtml`) ensuring values are safely coerced to Strings and escaped before injection into DOM.
