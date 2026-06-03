@@ -10,3 +10,7 @@
 **Vulnerability:** Internal exception messages (`E.Message`) were being exposed to the client in HTTP 500 error responses in `src/server/Controllers/DroneDelivery.Server.Controller.Locations.pas`.
 **Learning:** Exposing raw exception strings can leak internal system details, database structures, or application state to attackers, which aids in reconnaissance and exploitation.
 **Prevention:** Always use safe, generic error messages for client-facing 500 responses (e.g., `{"error": "Internal Server Error"}`). Only log the actual exception details internally.
+## 2026-06-03 - [HIGH] Prevent DOM-based XSS in Leaflet Maps
+**Vulnerability:** In `src/client/mapa.html` and `src/client/assets/mapa.html`, the `p.label` property was directly concatenated into HTML within Leaflet map popups (`<b>${p.label}</b>`). This allowed an attacker to execute arbitrary JavaScript if they could control the waypoint/hub names stored in the database.
+**Learning:** Even internal mapping tools handling dynamic backend data are vulnerable to Cross-Site Scripting (XSS). Direct interpolation of user-controlled properties into HTML structures bypasses typical front-end framework protections when using raw strings (e.g., template literals or `innerHTML`).
+**Prevention:** Always sanitize or escape HTML entities before interpolating dynamic data into HTML structures. Implement a custom `escapeHtml` JavaScript function (or use a robust sanitization library) to convert sensitive characters (`<, >, &, ", '`) to their corresponding HTML entities.
