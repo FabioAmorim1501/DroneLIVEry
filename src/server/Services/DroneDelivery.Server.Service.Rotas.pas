@@ -103,6 +103,11 @@ begin
           if not LPedidoDestinos.TryGetValue(LPedido, LLocalDestinoCandidato) then
             Continue;
 
+          // ⚡ Bolt: Performance Fix - Add early lightweight arithmetic checks
+          // Validate payload constraints before computationally expensive trigonometric Haversine math.
+          if LCargaAtual + LPedido.PesoLiquido > LDrone.PayloadMaximo then
+            Continue;
+
           LDistanciaAtePedido := CalcularDistanciaKm(LCurrentLat, LCurrentLng,
                                                      LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude);
 
@@ -112,9 +117,8 @@ begin
             LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
                                                       LLocalHub.Latitude, LLocalHub.Longitude);
 
-            // Validação absoluta das restrições de engenharia da aeronave
-            if (LCargaAtual + LPedido.PesoLiquido <= LDrone.PayloadMaximo) and
-               (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
+            // Validação absoluta das restrições de autonomia da aeronave
+            if (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
             begin
               LMenorDistancia := LDistanciaAtePedido;
               LPedidoMaisProximo := LPedido;
