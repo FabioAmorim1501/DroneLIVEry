@@ -203,6 +203,7 @@ begin
   if ABold then Result.Font.Style := [TFontStyle.fsBold] else Result.Font.Style := [];
   Result.StyledSettings := Result.StyledSettings - [TStyledSetting.Size, TStyledSetting.Style, TStyledSetting.FontColor];
   Result.Text := AText;
+  Result.HitTest := False;
 end;
 
 function MakeEdit(AParent: TFmxObject; const APrompt: string; AFontSize: Single = 14): TEdit;
@@ -495,7 +496,8 @@ begin
 
   FModalBtnConfirm := MakeButton(FModalPanel, 'Calcular'); FModalBtnConfirm.Position.X := 60; FModalBtnConfirm.Position.Y := 190; FModalBtnConfirm.Width := 120; FModalBtnConfirm.TagString := TCornerButton(Sender).TagString; FModalBtnConfirm.OnClick := ActionModalConfirmClick;
   FModalBtnClose := MakeButton(FModalPanel, 'Cancelar'); FModalBtnClose.Position.X := 200; FModalBtnClose.Position.Y := 190; FModalBtnClose.Width := 110; FModalBtnClose.OnClick := ActionModalCloseClick;
-  FModalEditDist.SetFocus;
+  if Assigned(FModalEditDist) and FModalEditDist.CanFocus then
+    FModalEditDist.SetFocus;
 end;
 
 // ===========================================================================
@@ -689,7 +691,8 @@ begin
   if Key = vkReturn then
   begin
     OnAddWaypointClick(nil);
-    FEditWaypoint.SetFocus;
+    if Assigned(FEditWaypoint) and FEditWaypoint.CanFocus then
+      FEditWaypoint.SetFocus;
   end;
 end;
 
@@ -919,7 +922,8 @@ begin
   if Key = vkReturn then
   begin
     OnSaveHangarClick(nil);
-    FEditHangarAddress.SetFocus;
+    if Assigned(FEditHangarAddress) and FEditHangarAddress.CanFocus then
+      FEditHangarAddress.SetFocus;
   end;
 end;
 
