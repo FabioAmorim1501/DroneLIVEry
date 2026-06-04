@@ -14,3 +14,15 @@
 **Vulnerability:** In `src/client/mapa.html` and `src/client/assets/mapa.html`, the `p.label` property was directly concatenated into HTML within Leaflet map popups (`<b>${p.label}</b>`). This allowed an attacker to execute arbitrary JavaScript if they could control the waypoint/hub names stored in the database.
 **Learning:** Even internal mapping tools handling dynamic backend data are vulnerable to Cross-Site Scripting (XSS). Direct interpolation of user-controlled properties into HTML structures bypasses typical front-end framework protections when using raw strings (e.g., template literals or `innerHTML`).
 **Prevention:** Always sanitize or escape HTML entities before interpolating dynamic data into HTML structures. Implement a custom `escapeHtml` JavaScript function (or use a robust sanitization library) to convert sensitive characters (`<, >, &, ", '`) to their corresponding HTML entities.
+## 2024-06-02 - [HIGH] Prevent DOM-based XSS in Map View
+**Vulnerability:** User-controlled strings (`p.label`) were injected directly into an HTML string for Leaflet Map popups in `src/client/mapa.html` via template literals.
+**Learning:** Client-side rendering via template literals can result in DOM-based XSS when data is populated from external sources without HTML entity escaping.
+**Prevention:** Always implement an explicit HTML escaping function (`escapeHtml`) ensuring values are safely coerced to Strings and escaped before injection into DOM.
+## 2024-05-28 - [CRITICAL] Memory Corruptions via Double-Free inside try..finally blocks
+**Vulnerability:** Calling `LDrone.Free;` before an `Exit` statement inside a `try..finally` block causes a double-free vulnerability, because Delphi automatically runs the `finally` block before exiting the routine.
+**Learning:** In Object Pascal, `Exit` does not bypass `finally` blocks. Attempting to manually clean up memory before an early exit within a `try..finally` scope will crash the application.
+**Prevention:** Never manually free an object inside a `try..finally` block that is already responsible for freeing that object. Simply call `Exit` and let the language handle the cleanup.
+## 2024-05-28 - [CRITICAL] Client-Side Exposure of Server Secrets
+**Vulnerability:** Adding the backend `API_SECRET_KEY` environment variable check to the FMX client app exposes the backend master secret, requiring it to be bundled or accessible in the client environment.
+**Learning:** Client applications (frontend) should never manage, know, or require server-side backend secrets. They must rely on user-authenticated tokens (like JWTs) acquired via login.
+**Prevention:** Never use `GetEnvironmentVariable` to retrieve backend API secrets inside frontend/client code. Authentication changes must correctly split client-session logic from backend-secret logic.
