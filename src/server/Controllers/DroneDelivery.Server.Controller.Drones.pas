@@ -35,27 +35,35 @@ var
   I: Integer;
   LObj: TJSONObject;
 begin
-  LRepo := TRepositoryDrone.Create;
   try
-    LList := LRepo.GetAll;
-    LArray := TJSONArray.Create;
-    for I := 0 to High(LList) do
-    begin
-      LObj := TJSONObject.Create;
-      LObj.AddPair('id', LList[I].Id);
-      LObj.AddPair('name', LList[I].Nome);
-      LObj.AddPair('max_payload_kg', TJSONNumber.Create(LList[I].PayloadMaximo));
-      LObj.AddPair('max_range_km', TJSONNumber.Create(LList[I].AutonomiaKm));
-      LObj.AddPair('battery_wh', TJSONNumber.Create(LList[I].BatteryWh));
-      LObj.AddPair('speed_kmh', TJSONNumber.Create(LList[I].VelocidadeKmH));
-      LObj.AddPair('image_url', LList[I].ImageUrl);
-      LObj.AddPair('status', LList[I].Status);
-      LArray.AddElement(LObj);
-      LList[I].Free;
+    LRepo := TRepositoryDrone.Create;
+    try
+      LList := LRepo.GetAll;
+      LArray := TJSONArray.Create;
+      for I := 0 to High(LList) do
+      begin
+        LObj := TJSONObject.Create;
+        LObj.AddPair('id', LList[I].Id);
+        LObj.AddPair('name', LList[I].Nome);
+        LObj.AddPair('max_payload_kg', TJSONNumber.Create(LList[I].PayloadMaximo));
+        LObj.AddPair('max_range_km', TJSONNumber.Create(LList[I].AutonomiaKm));
+        LObj.AddPair('battery_wh', TJSONNumber.Create(LList[I].BatteryWh));
+        LObj.AddPair('speed_kmh', TJSONNumber.Create(LList[I].VelocidadeKmH));
+        LObj.AddPair('image_url', LList[I].ImageUrl);
+        LObj.AddPair('status', LList[I].Status);
+        LArray.AddElement(LObj);
+        LList[I].Free;
+      end;
+      Res.Status(200).ContentType('application/json').Send(LArray);
+    finally
+      LRepo.Free;
     end;
-    Res.Status(200).ContentType('application/json').Send(LArray);
-  finally
-    LRepo.Free;
+  except
+    on E: Exception do
+    begin
+      Writeln('Internal Server Error: ', E.Message);
+      Res.Status(500).Send('{"error": "Internal Server Error"}');
+    end;
   end;
 end;
 
@@ -66,45 +74,53 @@ var
   LBody: TJSONObject;
   LObj: TJSONObject;
 begin
-  LBody := Req.Body<TJSONObject>;
-  if not Assigned(LBody) then begin Res.Status(400); Exit; end;
-  
-  if (GetJsonDouble(LBody, 'max_payload_kg') < 0) or
-     (GetJsonDouble(LBody, 'max_range_km') < 0) or
-     (GetJsonDouble(LBody, 'battery_wh') < 0) or
-     (GetJsonDouble(LBody, 'speed_kmh') < 0) then
-  begin
-    Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
-    Exit;
-  end;
-
-  LDrone := TDroneEntity.Create;
   try
-    LDrone.Id := GetJsonString(LBody, 'id', TGUID.NewGuid.ToString.Replace('{','').Replace('}','').Replace('-','').Substring(0, 24));
-    LDrone.Nome := GetJsonString(LBody, 'name', 'Drone Sem Nome');
-    LDrone.PayloadMaximo := GetJsonDouble(LBody, 'max_payload_kg');
-    LDrone.AutonomiaKm := GetJsonDouble(LBody, 'max_range_km');
-    LDrone.BatteryWh := GetJsonDouble(LBody, 'battery_wh');
-    LDrone.VelocidadeKmH := GetJsonDouble(LBody, 'speed_kmh');
-    LDrone.ImageUrl := GetJsonString(LBody, 'image_url');
-    LDrone.Status := GetJsonString(LBody, 'status', 'available');
+    LBody := Req.Body<TJSONObject>;
+    if not Assigned(LBody) then begin Res.Status(400); Exit; end;
     
-    LRepo := TRepositoryDrone.Create;
+    if (GetJsonDouble(LBody, 'max_payload_kg') < 0) or
+       (GetJsonDouble(LBody, 'max_range_km') < 0) or
+       (GetJsonDouble(LBody, 'battery_wh') < 0) or
+       (GetJsonDouble(LBody, 'speed_kmh') < 0) then
+    begin
+      Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
+      Exit;
+    end;
+
+    LDrone := TDroneEntity.Create;
     try
-      LRepo.Insert(LDrone);
-      LObj := TJSONObject.Create;
+      LDrone.Id := GetJsonString(LBody, 'id', TGUID.NewGuid.ToString.Replace('{','').Replace('}','').Replace('-','').Substring(0, 24));
+      LDrone.Nome := GetJsonString(LBody, 'name', 'Drone Sem Nome');
+      LDrone.PayloadMaximo := GetJsonDouble(LBody, 'max_payload_kg');
+      LDrone.AutonomiaKm := GetJsonDouble(LBody, 'max_range_km');
+      LDrone.BatteryWh := GetJsonDouble(LBody, 'battery_wh');
+      LDrone.VelocidadeKmH := GetJsonDouble(LBody, 'speed_kmh');
+      LDrone.ImageUrl := GetJsonString(LBody, 'image_url');
+      LDrone.Status := GetJsonString(LBody, 'status', 'available');
+
+      LRepo := TRepositoryDrone.Create;
       try
-        LObj.AddPair('message', 'Drone Criado Localmente');
-        LObj.AddPair('id', LDrone.Id);
-        Res.Status(201).ContentType('application/json').Send(LObj.ToJSON);
+        LRepo.Insert(LDrone);
+        LObj := TJSONObject.Create;
+        try
+          LObj.AddPair('message', 'Drone Criado Localmente');
+          LObj.AddPair('id', LDrone.Id);
+          Res.Status(201).ContentType('application/json').Send(LObj.ToJSON);
+        finally
+          LObj.Free;
+        end;
       finally
-        LObj.Free;
+        LRepo.Free;
       end;
     finally
-      LRepo.Free;
+      LDrone.Free;
     end;
-  finally
-    LDrone.Free;
+  except
+    on E: Exception do
+    begin
+      Writeln('Internal Server Error: ', E.Message);
+      Res.Status(500).Send('{"error": "Internal Server Error"}');
+    end;
   end;
 end;
 
@@ -114,35 +130,43 @@ var
   LDrone: TDroneEntity;
   LObj: TJSONObject;
 begin
-  LRepo := TRepositoryDrone.Create;
   try
-    LDrone := LRepo.GetById(Req.Params['drone_id']);
-    if Assigned(LDrone) then
-    begin
-      LObj := TJSONObject.Create;
-      LObj.AddPair('id', LDrone.Id);
-      LObj.AddPair('name', LDrone.Nome);
-      LObj.AddPair('max_payload_kg', TJSONNumber.Create(LDrone.PayloadMaximo));
-      LObj.AddPair('max_range_km', TJSONNumber.Create(LDrone.AutonomiaKm));
-      LObj.AddPair('battery_wh', TJSONNumber.Create(LDrone.BatteryWh));
-      LObj.AddPair('speed_kmh', TJSONNumber.Create(LDrone.VelocidadeKmH));
-      LObj.AddPair('image_url', LDrone.ImageUrl);
-      LObj.AddPair('status', LDrone.Status);
-      Res.Status(200).ContentType('application/json').Send(LObj);
-      LDrone.Free;
-    end
-    else
-    begin
-      LObj := TJSONObject.Create;
-      try
-        LObj.AddPair('error', 'Drone não encontrado no BD Local');
-        Res.Status(404).ContentType('application/json').Send(LObj.ToJSON);
-      finally
-        LObj.Free;
+    LRepo := TRepositoryDrone.Create;
+    try
+      LDrone := LRepo.GetById(Req.Params['drone_id']);
+      if Assigned(LDrone) then
+      begin
+        LObj := TJSONObject.Create;
+        LObj.AddPair('id', LDrone.Id);
+        LObj.AddPair('name', LDrone.Nome);
+        LObj.AddPair('max_payload_kg', TJSONNumber.Create(LDrone.PayloadMaximo));
+        LObj.AddPair('max_range_km', TJSONNumber.Create(LDrone.AutonomiaKm));
+        LObj.AddPair('battery_wh', TJSONNumber.Create(LDrone.BatteryWh));
+        LObj.AddPair('speed_kmh', TJSONNumber.Create(LDrone.VelocidadeKmH));
+        LObj.AddPair('image_url', LDrone.ImageUrl);
+        LObj.AddPair('status', LDrone.Status);
+        Res.Status(200).ContentType('application/json').Send(LObj);
+        LDrone.Free;
+      end
+      else
+      begin
+        LObj := TJSONObject.Create;
+        try
+          LObj.AddPair('error', 'Drone não encontrado no BD Local');
+          Res.Status(404).ContentType('application/json').Send(LObj.ToJSON);
+        finally
+          LObj.Free;
+        end;
       end;
+    finally
+      LRepo.Free;
     end;
-  finally
-    LRepo.Free;
+  except
+    on E: Exception do
+    begin
+      Writeln('Internal Server Error: ', E.Message);
+      Res.Status(500).Send('{"error": "Internal Server Error"}');
+    end;
   end;
 end;
 
@@ -152,53 +176,61 @@ var
   LDrone: TDroneEntity;
   LBody: TJSONObject;
 begin
-  LBody := Req.Body<TJSONObject>;
-  if not Assigned(LBody) then begin Res.Status(400); Exit; end;
-  
-  LRepo := TRepositoryDrone.Create;
   try
-    LDrone := LRepo.GetById(Req.Params['drone_id']);
-    if Assigned(LDrone) then
-    begin
-      LDrone.Nome := GetJsonString(LBody, 'name', LDrone.Nome);
-      LDrone.PayloadMaximo := GetJsonDouble(LBody, 'max_payload_kg', LDrone.PayloadMaximo);
-      LDrone.AutonomiaKm := GetJsonDouble(LBody, 'max_range_km', LDrone.AutonomiaKm);
-      LDrone.BatteryWh := GetJsonDouble(LBody, 'battery_wh', LDrone.BatteryWh);
-      LDrone.VelocidadeKmH := GetJsonDouble(LBody, 'speed_kmh', LDrone.VelocidadeKmH);
-      LDrone.ImageUrl := GetJsonString(LBody, 'image_url', LDrone.ImageUrl);
-      LDrone.Status := GetJsonString(LBody, 'status', LDrone.Status);
+    LBody := Req.Body<TJSONObject>;
+    if not Assigned(LBody) then begin Res.Status(400); Exit; end;
 
-      if (LDrone.PayloadMaximo < 0) or (LDrone.AutonomiaKm < 0) or (LDrone.BatteryWh < 0) or (LDrone.VelocidadeKmH < 0) then
+    LRepo := TRepositoryDrone.Create;
+    try
+      LDrone := LRepo.GetById(Req.Params['drone_id']);
+      if Assigned(LDrone) then
       begin
-        Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
+        LDrone.Nome := GetJsonString(LBody, 'name', LDrone.Nome);
+        LDrone.PayloadMaximo := GetJsonDouble(LBody, 'max_payload_kg', LDrone.PayloadMaximo);
+        LDrone.AutonomiaKm := GetJsonDouble(LBody, 'max_range_km', LDrone.AutonomiaKm);
+        LDrone.BatteryWh := GetJsonDouble(LBody, 'battery_wh', LDrone.BatteryWh);
+        LDrone.VelocidadeKmH := GetJsonDouble(LBody, 'speed_kmh', LDrone.VelocidadeKmH);
+        LDrone.ImageUrl := GetJsonString(LBody, 'image_url', LDrone.ImageUrl);
+        LDrone.Status := GetJsonString(LBody, 'status', LDrone.Status);
+
+        if (LDrone.PayloadMaximo < 0) or (LDrone.AutonomiaKm < 0) or (LDrone.BatteryWh < 0) or (LDrone.VelocidadeKmH < 0) then
+        begin
+          Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
+          LDrone.Free;
+          Exit;
+        end;
+
+        LRepo.Update(LDrone);
+
+        var LResObj := TJSONObject.Create;
+        try
+          LResObj.AddPair('message', 'Drone Atualizado no BD');
+          Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
+        finally
+          LResObj.Free;
+        end;
+
         LDrone.Free;
-        Exit;
+      end
+      else
+      begin
+        var LResErr := TJSONObject.Create;
+        try
+          LResErr.AddPair('error', 'Drone não encontrado');
+          Res.Status(404).ContentType('application/json').Send(LResErr.ToJSON);
+        finally
+          LResErr.Free;
+        end;
       end;
-      
-      LRepo.Update(LDrone);
-
-      var LResObj := TJSONObject.Create;
-      try
-        LResObj.AddPair('message', 'Drone Atualizado no BD');
-        Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
-      finally
-        LResObj.Free;
-      end;
-
-      LDrone.Free;
-    end
-    else
-    begin
-      var LResErr := TJSONObject.Create;
-      try
-        LResErr.AddPair('error', 'Drone não encontrado');
-        Res.Status(404).ContentType('application/json').Send(LResErr.ToJSON);
-      finally
-        LResErr.Free;
-      end;
+    finally
+      LRepo.Free;
     end;
-  finally
-    LRepo.Free;
+  except
+    on E: Exception do
+    begin
+      Writeln('Internal Server Error: ', E.Message);
+      Res.Status(500).Send('{"error": "Internal Server Error"}');
+    end;
   end;
 end;
 
@@ -206,18 +238,26 @@ procedure DeleteDrone(Req: THorseRequest; Res: THorseResponse; Next: TProc);
 var
   LRepo: TRepositoryDrone;
 begin
-  LRepo := TRepositoryDrone.Create;
   try
-    LRepo.Delete(Req.Params['drone_id']);
-    var LResObj := TJSONObject.Create;
+    LRepo := TRepositoryDrone.Create;
     try
-      LResObj.AddPair('message', 'Drone Deletado do BD');
-      Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
+      LRepo.Delete(Req.Params['drone_id']);
+      var LResObj := TJSONObject.Create;
+      try
+        LResObj.AddPair('message', 'Drone Deletado do BD');
+        Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
+      finally
+        LResObj.Free;
+      end;
     finally
-      LResObj.Free;
+      LRepo.Free;
     end;
-  finally
-    LRepo.Free;
+  except
+    on E: Exception do
+    begin
+      Writeln('Internal Server Error: ', E.Message);
+      Res.Status(500).Send('{"error": "Internal Server Error"}');
+    end;
   end;
 end;
 
@@ -228,27 +268,35 @@ var
   LPrice: Double;
   LObj: TJSONObject;
 begin
-  LDist := Req.Query['distance_km'];
-  LDist := StringReplace(LDist, ',', '.', [rfReplaceAll]);
-  LDistVal := StrToFloatDef(LDist, 0.0);
-  
-  if LDistVal < 0 then
-  begin
-    Res.Status(400).Send('{"error": "Distance must be a non-negative value"}');
-    Exit;
-  end;
-
-  // Algoritmo nativo de cálculo substituindo o servidor remoto!
-  // Preço Base R$ 10 + R$ 2.50 por Km
-  LPrice := 10.0 + (LDistVal * 2.50);
-  
-  LObj := TJSONObject.Create;
   try
-    LObj.AddPair('distance_km', TJSONNumber.Create(LDistVal));
-    LObj.AddPair('estimated_price', TJSONNumber.Create(LPrice));
-    Res.Status(200).ContentType('application/json').Send(LObj.ToJSON);
-  finally
-    LObj.Free;
+    LDist := Req.Query['distance_km'];
+    LDist := StringReplace(LDist, ',', '.', [rfReplaceAll]);
+    LDistVal := StrToFloatDef(LDist, 0.0);
+
+    if LDistVal < 0 then
+    begin
+      Res.Status(400).Send('{"error": "Distance must be a non-negative value"}');
+      Exit;
+    end;
+
+    // Algoritmo nativo de cálculo substituindo o servidor remoto!
+    // Preço Base R$ 10 + R$ 2.50 por Km
+    LPrice := 10.0 + (LDistVal * 2.50);
+
+    LObj := TJSONObject.Create;
+    try
+      LObj.AddPair('distance_km', TJSONNumber.Create(LDistVal));
+      LObj.AddPair('estimated_price', TJSONNumber.Create(LPrice));
+      Res.Status(200).ContentType('application/json').Send(LObj.ToJSON);
+    finally
+      LObj.Free;
+    end;
+  except
+    on E: Exception do
+    begin
+      Writeln('Internal Server Error: ', E.Message);
+      Res.Status(500).Send('{"error": "Internal Server Error"}');
+    end;
   end;
 end;
 
