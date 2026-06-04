@@ -69,6 +69,15 @@ begin
   LBody := Req.Body<TJSONObject>;
   if not Assigned(LBody) then begin Res.Status(400); Exit; end;
   
+  if (GetJsonDouble(LBody, 'max_payload_kg') < 0) or
+     (GetJsonDouble(LBody, 'max_range_km') < 0) or
+     (GetJsonDouble(LBody, 'battery_wh') < 0) or
+     (GetJsonDouble(LBody, 'speed_kmh') < 0) then
+  begin
+    Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
+    Exit;
+  end;
+
   LDrone := TDroneEntity.Create;
   try
     LDrone.Id := GetJsonString(LBody, 'id', TGUID.NewGuid.ToString.Replace('{','').Replace('}','').Replace('-','').Substring(0, 24));
@@ -158,6 +167,13 @@ begin
       LDrone.VelocidadeKmH := GetJsonDouble(LBody, 'speed_kmh', LDrone.VelocidadeKmH);
       LDrone.ImageUrl := GetJsonString(LBody, 'image_url', LDrone.ImageUrl);
       LDrone.Status := GetJsonString(LBody, 'status', LDrone.Status);
+
+      if (LDrone.PayloadMaximo < 0) or (LDrone.AutonomiaKm < 0) or (LDrone.BatteryWh < 0) or (LDrone.VelocidadeKmH < 0) then
+      begin
+        Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
+        LDrone.Free;
+        Exit;
+      end;
       
       LRepo.Update(LDrone);
 
@@ -216,6 +232,12 @@ begin
   LDist := StringReplace(LDist, ',', '.', [rfReplaceAll]);
   LDistVal := StrToFloatDef(LDist, 0.0);
   
+  if LDistVal < 0 then
+  begin
+    Res.Status(400).Send('{"error": "Distance must be a non-negative value"}');
+    Exit;
+  end;
+
   // Algoritmo nativo de cálculo substituindo o servidor remoto!
   // Preço Base R$ 10 + R$ 2.50 por Km
   LPrice := 10.0 + (LDistVal * 2.50);
