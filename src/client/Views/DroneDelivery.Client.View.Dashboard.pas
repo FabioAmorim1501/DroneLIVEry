@@ -198,6 +198,7 @@ function MakeLabel(AParent: TFmxObject; const AText: string; AFontSize: Single;
 begin
   Result := TLabel.Create(AParent);
   Result.Parent := AParent;
+  Result.HitTest := False;
   Result.Font.Size := AFontSize;
   Result.TextSettings.FontColor := AColor;
   if ABold then Result.Font.Style := [TFontStyle.fsBold] else Result.Font.Style := [];
