@@ -7,7 +7,8 @@ uses
   DroneDelivery.Domain.Entities,
   DroneDelivery.Server.Provider.Connection,
   FireDAC.Comp.Client,
-  System.Generics.Collections;
+  System.Generics.Collections,
+  Data.DB;
 
 type
   TRepositoryDrone = class(TInterfacedObject, IRepository<TDroneEntity>)
@@ -51,6 +52,8 @@ var
   Qry: TFDQuery;
   LDrone: TDroneEntity;
   LList: TList<TDroneEntity>;
+  // ⚡ Bolt: Performance Fix - Cache fields to prevent string lookups inside the loop
+  FldId, FldName, FldPayload, FldAutonomia, FldBattery, FldSpeed, FldImage, FldStatus: TField;
 begin
   LList := TList<TDroneEntity>.Create;
   try
@@ -63,17 +66,27 @@ begin
       // Pre-allocate memory to prevent O(N^2) reallocation overhead
       LList.Capacity := Qry.RecordCount;
 
+      // ⚡ Bolt: Performance Fix - Cache field references outside the loop
+      FldId := Qry.FieldByName('id');
+      FldName := Qry.FieldByName('name');
+      FldPayload := Qry.FieldByName('max_payload_kg');
+      FldAutonomia := Qry.FieldByName('max_range_km');
+      FldBattery := Qry.FieldByName('battery_wh');
+      FldSpeed := Qry.FieldByName('speed_kmh');
+      FldImage := Qry.FieldByName('image_url');
+      FldStatus := Qry.FieldByName('status');
+
       while not Qry.Eof do
       begin
         LDrone := TDroneEntity.Create;
-        LDrone.Id := Qry.FieldByName('id').AsString;
-        LDrone.Nome := Qry.FieldByName('name').AsString;
-        LDrone.PayloadMaximo := Qry.FieldByName('max_payload_kg').AsFloat;
-        LDrone.AutonomiaKm := Qry.FieldByName('max_range_km').AsFloat;
-        LDrone.BatteryWh := Qry.FieldByName('battery_wh').AsFloat;
-        LDrone.VelocidadeKmH := Qry.FieldByName('speed_kmh').AsFloat;
-        LDrone.ImageUrl := Qry.FieldByName('image_url').AsString;
-        LDrone.Status := Qry.FieldByName('status').AsString;
+        LDrone.Id := FldId.AsString;
+        LDrone.Nome := FldName.AsString;
+        LDrone.PayloadMaximo := FldPayload.AsFloat;
+        LDrone.AutonomiaKm := FldAutonomia.AsFloat;
+        LDrone.BatteryWh := FldBattery.AsFloat;
+        LDrone.VelocidadeKmH := FldSpeed.AsFloat;
+        LDrone.ImageUrl := FldImage.AsString;
+        LDrone.Status := FldStatus.AsString;
         LList.Add(LDrone);
         Qry.Next;
       end;

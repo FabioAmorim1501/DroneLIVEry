@@ -7,7 +7,8 @@ uses
   DroneDelivery.Domain.Entities,
   DroneDelivery.Server.Provider.Connection,
   FireDAC.Comp.Client,
-  System.Generics.Collections;
+  System.Generics.Collections,
+  Data.DB;
 
 type
   TRepositoryLocation = class(TInterfacedObject, IRepository<TLocalEntity>)
@@ -51,6 +52,8 @@ var
   Qry: TFDQuery;
   LLocal: TLocalEntity;
   LList: TList<TLocalEntity>;
+  // ⚡ Bolt: Performance Fix - Cache fields to prevent string lookups inside the loop
+  FldId, FldName, FldLat, FldLng, FldType: TField;
 begin
   LList := TList<TLocalEntity>.Create;
   try
@@ -63,14 +66,21 @@ begin
       // Pre-allocate memory to prevent O(N^2) reallocation overhead
       LList.Capacity := Qry.RecordCount;
 
+      // ⚡ Bolt: Performance Fix - Cache field references outside the loop
+      FldId := Qry.FieldByName('id');
+      FldName := Qry.FieldByName('name');
+      FldLat := Qry.FieldByName('latitude');
+      FldLng := Qry.FieldByName('longitude');
+      FldType := Qry.FieldByName('loc_type');
+
       while not Qry.Eof do
       begin
         LLocal := TLocalEntity.Create;
-        LLocal.Id := Qry.FieldByName('id').AsString;
-        LLocal.Nome := Qry.FieldByName('name').AsString;
-        LLocal.Latitude := Qry.FieldByName('latitude').AsFloat;
-        LLocal.Longitude := Qry.FieldByName('longitude').AsFloat;
-        if Qry.FieldByName('loc_type').AsString = 'base' then LLocal.Tipo := ltBase else LLocal.Tipo := ltCliente;
+        LLocal.Id := FldId.AsString;
+        LLocal.Nome := FldName.AsString;
+        LLocal.Latitude := FldLat.AsFloat;
+        LLocal.Longitude := FldLng.AsFloat;
+        if FldType.AsString = 'base' then LLocal.Tipo := ltBase else LLocal.Tipo := ltCliente;
 
         LList.Add(LLocal);
         Qry.Next;
