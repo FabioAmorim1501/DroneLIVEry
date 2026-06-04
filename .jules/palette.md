@@ -15,3 +15,6 @@
 ## 2024-05-31 - Safe Focus Management in Modals
 **Learning:** In Delphi FMX, when handling `vkReturn` inside an input field that triggers a modal action (like a calculation or confirmation), returning focus back to the input field (`SetFocus`) allows for rapid consecutive entries without breaking the keyboard flow. However, it MUST be wrapped in an `Assigned(Control) and Control.CanFocus` check to prevent crashes (`EInvalidOperation`) if the action hides or disables the modal.
 **Action:** Always check `CanFocus` before explicitly calling `SetFocus` after programmatic trigger of actions.
+## 2024-06-04 - Improve feedback states in Delphi async actions
+**Learning:** Adding immediate loading states and post-action confirmations to UI elements vastly improves perceived performance. Furthermore, reading UI state (like `FEditWaypoint.Text`) inside an async callback introduces a race condition; state must be captured *before* making the asynchronous request.
+**Action:** Always provide visual validation for map inputs and asynchronous tasks. Ensure thread safety by capturing UI values into local variables prior to the async call and by performing UI updates via `TThread.Synchronize`.
