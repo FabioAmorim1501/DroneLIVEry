@@ -105,6 +105,16 @@
         var g_markers = [];
         var g_polylines = [];
 
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return String(unsafe)
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
         // --- Generic API ---
         function clearMap() {
             g_markers.forEach(m => map.removeLayer(m));
@@ -188,7 +198,7 @@
                                  ? `<span class="bat-badge ${batClass}">⚡ ${p.battery.toFixed(1)}%</span>` 
                                  : '';
                     
-                    var popupHtml = `<b>${p.label}</b>${batStr}`;
+                    var popupHtml = `<b>${escapeHtml(p.label)}</b>${batStr}`;
                     
                     var isHub = (index === 0 || index === points.length - 1);
                     var iconUrl = isHub 

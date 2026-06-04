@@ -51,7 +51,7 @@ var
   LPedidosPendentes: TList<TPedidoEntity>;
   LLocaisMap: TDictionary<string, TLocalEntity>;
   LPedidoDestinos: TDictionary<TPedidoEntity, TLocalEntity>;
-  I, LIndexMaisProximo: Integer;
+  I, LMelhorIndex: Integer;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
@@ -97,14 +97,13 @@ begin
         LMenorDistancia := MaxDouble;
         LPedidoMaisProximo := nil;
         LLocalDestino := nil;
-        LIndexMaisProximo := -1;
+        LMelhorIndex := -1;
 
         for I := 0 to LPedidosPendentes.Count - 1 do
         begin
           LPedido := LPedidosPendentes[I];
 
-          // ⚡ Bolt: Fast-path rejection. Se o peso do pedido já excede a capacidade atual,
-          // ignora antes de realizar operações trigonométricas pesadas ou buscas adicionais
+          // Restrição rápida de payload (impede cálculos desnecessários)
           if LCargaAtual + LPedido.PesoLiquido > LDrone.PayloadMaximo then
             Continue;
 
@@ -121,13 +120,13 @@ begin
             LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
                                                       LLocalHub.Latitude, LLocalHub.Longitude);
 
-            // Validação absoluta das restrições de engenharia da aeronave (Payload já verificado)
+            // Validação absoluta das restrições de engenharia da aeronave
             if (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
             begin
               LMenorDistancia := LDistanciaAtePedido;
               LPedidoMaisProximo := LPedido;
               LLocalDestino := LLocalDestinoCandidato;
-              LIndexMaisProximo := I;
+              LMelhorIndex := I;
             end;
           end;
         end;
@@ -135,13 +134,9 @@ begin
         // Se a aeronave atingiu a capacidade máxima (peso ou bateria), encerra o turno deste drone
         if LPedidoMaisProximo = nil then Break;
 
-        // ⚡ Bolt: Efetiva a alocação e desconta recursos
-        // Substitui .Remove() por Swap-and-Pop O(1) para evitar shift no array interno
-        if LIndexMaisProximo >= 0 then
-        begin
-          LPedidosPendentes[LIndexMaisProximo] := LPedidosPendentes[LPedidosPendentes.Count - 1];
-          LPedidosPendentes.Delete(LPedidosPendentes.Count - 1);
-        end;
+        // Efetiva a alocação e desconta recursos com Swap-and-Pop O(1)
+        LPedidosPendentes[LMelhorIndex] := LPedidosPendentes.Last;
+        LPedidosPendentes.Delete(LPedidosPendentes.Count - 1);
 
         LCargaAtual := LCargaAtual + LPedidoMaisProximo.PesoLiquido;
         LDistanciaPercorrida := LDistanciaPercorrida + LMenorDistancia;

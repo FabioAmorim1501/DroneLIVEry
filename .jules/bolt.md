@@ -17,3 +17,6 @@
 ## 2024-05-30 - Short-circuiting Expensive Math in Loops
 **Learning:** Haversine distance functions are computationally heavy (trigonometry). Calculating them before checking simple business logic rules (like weight capacity) wastes CPU cycles.
 **Action:** Always place lightweight constraints (e.g., `Weight > MaxPayload`) before expensive mathematical functions inside large loops to short-circuit execution.
+## 2026-06-01 - Swap-and-Pop O(1) Removal and Short-Circuit Payload Checks
+**Learning:** Using `TList<T>.Remove` inside loops forces an O(N) internal search and subsequent shift of all trailing elements. Also, complex calculations (like Haversine distances) become bottlenecks if performed before confirming fast-fail business rules.
+**Action:** Use an indexed loop to access elements. Instead of `.Remove`, apply O(1) Swap-and-Pop (`List[Index] := List.Last; List.Delete(Last)`) when element order doesn't matter. Additionally, always perform fast arithmetic limits (like max payload checks) before heavy mathematical functions to short-circuit the loop early.
