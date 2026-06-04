@@ -481,7 +481,8 @@ begin
   if Key = vkReturn then
   begin
     ActionModalConfirmClick(FModalBtnConfirm);
-    if Assigned(FModalEditDist) and FModalEditDist.CanFocus then FModalEditDist.SetFocus;
+    if Assigned(FModalEditDist) and FModalEditDist.CanFocus then
+      FModalEditDist.SetFocus;
   end;
 end;
 
