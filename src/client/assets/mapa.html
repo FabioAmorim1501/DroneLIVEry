@@ -31,6 +31,17 @@
         var markers = [];
         var polylines = [];
 
+        // --- Security ---
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
         // Delphi Injected Function
         // points = [ {lat: -23.5, lng: -46.6, label: "Hangar", battery: 100}, 
         //            {lat: -23.6, lng: -46.5, label: "Destino 1", battery: 80} ]
@@ -69,7 +80,7 @@
                 });
 
                 var marker = L.marker(latLng, {icon: colorIcon}).addTo(map);
-                marker.bindPopup('<div class="drone-popup"><b>' + p.label + '</b>' + batStr + '</div>');
+                marker.bindPopup('<div class="drone-popup"><b>' + escapeHtml(p.label) + '</b>' + batStr + '</div>');
                 if(index === points.length - 1) marker.openPopup(); // Open last (usually hub return)
                 markers.push(marker);
             });

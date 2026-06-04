@@ -51,6 +51,7 @@ var
   LPedidosPendentes: TList<TPedidoEntity>;
   LLocaisMap: TDictionary<string, TLocalEntity>;
   LPedidoDestinos: TDictionary<TPedidoEntity, TLocalEntity>;
+  I, LMelhorIndex: Integer;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
@@ -96,9 +97,16 @@ begin
         LMenorDistancia := MaxDouble;
         LPedidoMaisProximo := nil;
         LLocalDestino := nil;
+        LMelhorIndex := -1;
 
-        for LPedido in LPedidosPendentes do
+        for I := 0 to LPedidosPendentes.Count - 1 do
         begin
+          LPedido := LPedidosPendentes[I];
+
+          // Restrição rápida de payload (impede cálculos desnecessários)
+          if LCargaAtual + LPedido.PesoLiquido > LDrone.PayloadMaximo then
+            Continue;
+
           // Resolve o ID do Destino em O(1) puro, sem conversão de string
           if not LPedidoDestinos.TryGetValue(LPedido, LLocalDestinoCandidato) then
             Continue;
@@ -123,6 +131,7 @@ begin
               LMenorDistancia := LDistanciaAtePedido;
               LPedidoMaisProximo := LPedido;
               LLocalDestino := LLocalDestinoCandidato;
+              LMelhorIndex := I;
             end;
           end;
         end;
@@ -130,8 +139,10 @@ begin
         // Se a aeronave atingiu a capacidade máxima (peso ou bateria), encerra o turno deste drone
         if LPedidoMaisProximo = nil then Break;
 
-        // Efetiva a alocação e desconta recursos
-        LPedidosPendentes.Remove(LPedidoMaisProximo);
+        // Efetiva a alocação e desconta recursos com Swap-and-Pop O(1)
+        LPedidosPendentes[LMelhorIndex] := LPedidosPendentes.Last;
+        LPedidosPendentes.Delete(LPedidosPendentes.Count - 1);
+
         LCargaAtual := LCargaAtual + LPedidoMaisProximo.PesoLiquido;
         LDistanciaPercorrida := LDistanciaPercorrida + LMenorDistancia;
         LCurrentLat := LLocalDestino.Latitude;
