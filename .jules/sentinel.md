@@ -10,3 +10,11 @@
 **Vulnerability:** Internal exception messages (`E.Message`) were being exposed to the client in HTTP 500 error responses in `src/server/Controllers/DroneDelivery.Server.Controller.Locations.pas`.
 **Learning:** Exposing raw exception strings can leak internal system details, database structures, or application state to attackers, which aids in reconnaissance and exploitation.
 **Prevention:** Always use safe, generic error messages for client-facing 500 responses (e.g., `{"error": "Internal Server Error"}`). Only log the actual exception details internally.
+## 2024-05-28 - [CRITICAL] Memory Corruptions via Double-Free inside try..finally blocks
+**Vulnerability:** Calling `LDrone.Free;` before an `Exit` statement inside a `try..finally` block causes a double-free vulnerability, because Delphi automatically runs the `finally` block before exiting the routine.
+**Learning:** In Object Pascal, `Exit` does not bypass `finally` blocks. Attempting to manually clean up memory before an early exit within a `try..finally` scope will crash the application.
+**Prevention:** Never manually free an object inside a `try..finally` block that is already responsible for freeing that object. Simply call `Exit` and let the language handle the cleanup.
+## 2024-05-28 - [CRITICAL] Client-Side Exposure of Server Secrets
+**Vulnerability:** Adding the backend `API_SECRET_KEY` environment variable check to the FMX client app exposes the backend master secret, requiring it to be bundled or accessible in the client environment.
+**Learning:** Client applications (frontend) should never manage, know, or require server-side backend secrets. They must rely on user-authenticated tokens (like JWTs) acquired via login.
+**Prevention:** Never use `GetEnvironmentVariable` to retrieve backend API secrets inside frontend/client code. Authentication changes must correctly split client-session logic from backend-secret logic.
