@@ -33,7 +33,15 @@ begin
       LLocal.Free;
     end
     else
-      Res.Status(404).Send('{"error": "Hangar Base não encontrado no BD"}');
+    begin
+      LObj := TJSONObject.Create;
+      try
+        LObj.AddPair('error', 'Hangar Base não encontrado no BD');
+        Res.Status(404).ContentType('application/json').Send(LObj.ToJSON);
+      finally
+        LObj.Free;
+      end;
+    end;
   finally
     LRepo.Free;
   end;
@@ -76,7 +84,15 @@ begin
         if (LLocal.Longitude = 0) and Assigned(LBody.GetValue('longitude')) then LLocal.Longitude := StrToFloatDef(LBody.GetValue('longitude').Value.Replace(',', '.'), 0.0);
         LRepo.Update(LLocal);
       end;
-      Res.Status(200).Send('{"message": "Endereço do CD Base Atualizado com Sucesso!"}');
+
+      var LResObj := TJSONObject.Create;
+      try
+        LResObj.AddPair('message', 'Endereço do CD Base Atualizado com Sucesso!');
+        Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
+      finally
+        LResObj.Free;
+      end;
+
       LLocal.Free;
     finally
       LRepo.Free;
