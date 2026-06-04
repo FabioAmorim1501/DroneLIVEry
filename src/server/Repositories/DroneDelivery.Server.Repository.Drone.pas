@@ -59,6 +59,10 @@ begin
       Qry.Connection := FConn;
       Qry.SQL.Text := 'SELECT * FROM drones';
       Qry.Open;
+
+      // Pre-allocate memory to prevent O(N^2) reallocation overhead
+      LList.Capacity := Qry.RecordCount;
+
       while not Qry.Eof do
       begin
         LDrone := TDroneEntity.Create;
