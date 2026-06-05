@@ -11,6 +11,10 @@ cat << 'INNER_EOF' > .jules/bolt.md
 ## 2026-05-30 - Array Reallocation Overhead in Delphi Loops
 **Learning:** Using `SetLength(Array, Length(Array) + 1)` inside loops causes O(N^2) memory reallocation overhead as Delphi creates a new block and copies the array each time. This creates a severe performance bottleneck for large datasets (e.g., retrieving lists from DB repositories).
 **Action:** When array size is known in advance, pre-allocate `SetLength(Array, Count)`. When size is unknown (e.g., iterating a database query), buffer the elements using `System.Generics.Collections.TList<T>`, then call `.ToArray()` at the end of the loop.
+
+## 2024-05-31 - TField Caching to Prevent O(N) String Lookups
+**Learning:** Calling `FieldByName('FieldName')` inside a database fetch loop (`while not Qry.Eof do`) is highly inefficient because it performs a sequential or map lookup by string for every field, on every row iteration. This results in significant overhead for large datasets.
+**Action:** When iterating through database records, always extract and cache the `TField` references (e.g., `FldId := Qry.FieldByName('id');`) outside of the loop, then access their values (`FldId.AsString`) inside the loop.
 INNER_EOF
 
 # Fix DroneDelivery.Client.Service.Maps.pas
