@@ -13,3 +13,7 @@
 ## 2024-05-31 - TField Caching to Prevent O(N) String Lookups
 **Learning:** Calling `FieldByName('FieldName')` inside a database fetch loop (`while not Qry.Eof do`) is highly inefficient because it performs a sequential or map lookup by string for every field, on every row iteration. This results in significant overhead for large datasets.
 **Action:** When iterating through database records, always extract and cache the `TField` references (e.g., `FldId := Qry.FieldByName('id');`) outside of the loop, then access their values (`FldId.AsString`) inside the loop.
+
+## 2024-06-05 - O(N²) String Concatenation Reallocation Overhead
+**Learning:** Found an O(N²) anti-pattern where a string was being dynamically constructed inside a loop using repeated concatenation (`Result := Result + ...`) during URL encoding. Since Delphi strings are immutable dynamic arrays of characters, this triggers O(N²) memory reallocation and copying.
+**Action:** Always avoid manual string concatenation in loops for tasks like encoding. Use native, optimized libraries (like `System.NetEncoding.TNetEncoding.URL.Encode`) or buffer with `TStringBuilder` when manual construction is strictly required.
