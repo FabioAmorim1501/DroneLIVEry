@@ -133,7 +133,7 @@ type
     procedure OnSaveHangarClick(Sender: TObject);
     procedure OnHangarKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
     procedure EnviarRotaAoMapa(const AJsonPontos: string);
-    procedure ProcessHangarSave(const AAddr: string; ALat, ALng: Double);
+    procedure ProcessHangarSave(const AAddr: string; ALat, ALng: Double; ABtn: TCornerButton = nil);
 
   public
   end;
@@ -375,6 +375,7 @@ procedure TViewDashboard.btnRefreshClick(Sender: TObject);
 var LAni: TAniIndicator;
 begin
   ClearDroneCards;
+  btnRefresh.Enabled := False;
   LAni := TAniIndicator.Create(Self); LAni.Parent := Self; LAni.Align := TAlignLayout.Center; LAni.Enabled := True;
   TThread.CreateAnonymousThread(procedure
   var LLista: TObjectList<TDroneDTO>;
@@ -383,6 +384,7 @@ begin
     TThread.Synchronize(nil, procedure
     var LDrone: TDroneDTO;
     begin
+      btnRefresh.Enabled := True;
       LAni.Enabled := False; LAni.Free;
       if Assigned(LLista) then try for LDrone in LLista do BuildDroneCard(LDrone); finally LLista.Free; end;
     end);
@@ -461,8 +463,14 @@ begin
 end;
 
 procedure TViewDashboard.ActionModalConfirmClick(Sender: TObject);
-var LDist: Double; LID: string;
+var LDist: Double; LID: string; LBtn: TCornerButton;
 begin
+  LBtn := nil;
+  if Assigned(Sender) and (Sender is TCornerButton) then
+  begin
+    LBtn := TCornerButton(Sender);
+    LBtn.Enabled := False;
+  end;
   LID := TCornerButton(Sender).TagString;
   LDist := StrToFloatDef(FModalEditDist.Text, 10.0);
   FModalLblResult.Visible := True; FModalLblResult.Text := 'Calculando...';
@@ -472,6 +480,7 @@ begin
     LAns := FViewModel.CalcularPreco(LID, LDist);
     TThread.Synchronize(nil, procedure
     begin
+      if Assigned(LBtn) then LBtn.Enabled := True;
       FModalLblResult.Text := LAns; FModalBtnClose.Text := 'Fechar';
     end);
   end).Start;
@@ -707,10 +716,18 @@ end;
 procedure TViewDashboard.OnAddWaypointClick(Sender: TObject);
 var
   LSearchedText: string;
+  LBtn: TCornerButton;
 begin
+  LBtn := nil;
+  if Assigned(Sender) and (Sender is TCornerButton) then
+  begin
+    LBtn := TCornerButton(Sender);
+    LBtn.Enabled := False;
+  end;
   LSearchedText := FEditWaypoint.Text.Trim;
   if LSearchedText.IsEmpty then
   begin
+    if Assigned(LBtn) then LBtn.Enabled := True;
     FLblMapStatus.Text := 'Aten'#231#227'o: Digite um endere'#231'o v'#225'lido para adicionar.';
     Exit;
   end;
@@ -718,11 +735,11 @@ begin
   TMapService.GeocodeAddressAsync(LSearchedText,
     procedure(Lat, Lng: Double)
     begin
-      TThread.Synchronize(nil, procedure begin AddWaypointToMap(LSearchedText, Lat, Lng); FEditWaypoint.Text := ''; FLblMapStatus.Text := 'Parada adicionada: ' + LSearchedText; end);
+      TThread.Synchronize(nil, procedure begin if Assigned(LBtn) then LBtn.Enabled := True; AddWaypointToMap(LSearchedText, Lat, Lng); FEditWaypoint.Text := ''; FLblMapStatus.Text := 'Parada adicionada: ' + LSearchedText; end);
     end,
     procedure(E: string)
     begin
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := E; end);
+      TThread.Synchronize(nil, procedure begin if Assigned(LBtn) then LBtn.Enabled := True; FLblMapStatus.Text := E; end);
     end);
 end;
 
@@ -750,14 +767,24 @@ begin
 end;
 
 procedure TViewDashboard.OnCalculateRouteClick(Sender: TObject);
+var
+  LBtn: TCornerButton;
 begin
+  LBtn := nil;
+  if Assigned(Sender) and (Sender is TCornerButton) then
+  begin
+    LBtn := TCornerButton(Sender);
+    LBtn.Enabled := False;
+  end;
   if FSelectedDroneId.IsEmpty then
   begin
+    if Assigned(LBtn) then LBtn.Enabled := True;
     FLblMapStatus.Text := 'Aten'#231#227'o: Selecione uma aeronave antes de calcular a rota.';
     Exit;
   end;
   if FWaypoints.Count = 0 then
   begin
+    if Assigned(LBtn) then LBtn.Enabled := True;
     FLblMapStatus.Text := 'Aten'#231#227'o: Adicione pelo menos uma parada na miss'#227'o.';
     Exit;
   end;
@@ -766,11 +793,11 @@ begin
     procedure(Resp: string)
     begin
       EnviarRotaAoMapa(Resp);
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.'; end);
+      TThread.Synchronize(nil, procedure begin if Assigned(LBtn) then LBtn.Enabled := True; FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.'; end);
     end,
     procedure(E: string)
     begin
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := E; end);
+      TThread.Synchronize(nil, procedure begin if Assigned(LBtn) then LBtn.Enabled := True; FLblMapStatus.Text := E; end);
     end);
 end;
 
@@ -932,7 +959,7 @@ end;
 procedure TViewDashboard.OnLoadCatalogueClick(Sender: TObject); begin LoadCatalogueAsync; end;
 procedure TViewDashboard.LoadCatalogueAsync; begin { Implementação async de catálogo } end;
 procedure TViewDashboard.OnSaveDroneClick(Sender: TObject); begin end;
-procedure TViewDashboard.ProcessHangarSave(const AAddr: string; ALat, ALng: Double);
+procedure TViewDashboard.ProcessHangarSave(const AAddr: string; ALat, ALng: Double; ABtn: TCornerButton = nil);
 begin
   // 1. Atualização Otimista da UI (Executa no Main Thread imediatamente!)
   FHubLat := ALat; 
@@ -954,6 +981,7 @@ begin
     // 3. Feedback visual (Sincronizado de volta para a UI)
     TThread.Synchronize(nil, procedure
     begin
+      if Assigned(ABtn) then ABtn.Enabled := True;
       if LSaved then
         ShowMessage('Endere'#231'o do Hub Base atualizado com sucesso no PostgreSQL!')
       else
@@ -974,18 +1002,29 @@ end;
 
 procedure TViewDashboard.OnSaveHangarClick(Sender: TObject);
 var LAddr: string;
+    LBtn: TCornerButton;
 begin
+  LBtn := nil;
+  if Assigned(Sender) and (Sender is TCornerButton) then
+  begin
+    LBtn := TCornerButton(Sender);
+    LBtn.Enabled := False;
+  end;
   LAddr := FEditHangarAddress.Text.Trim;
-  if LAddr.IsEmpty then Exit;
+  if LAddr.IsEmpty then
+  begin
+    if Assigned(LBtn) then LBtn.Enabled := True;
+    Exit;
+  end;
   
   TMapService.GeocodeAddressAsync(LAddr,
     procedure(Lat, Lng: Double)
     begin
-      ProcessHangarSave(LAddr, Lat, Lng);
+      ProcessHangarSave(LAddr, Lat, Lng, LBtn);
     end,
     procedure(E: string)
     begin
-      ShowMessage('Local n'#227'o encontrado no mapa global. Tente ser mais espec'#237'fico. Erro: ' + E);
+      TThread.Synchronize(nil, procedure begin if Assigned(LBtn) then LBtn.Enabled := True; ShowMessage('Local n'#227'o encontrado no mapa global. Tente ser mais espec'#237'fico. Erro: ' + E); end);
     end
   );
 end;
