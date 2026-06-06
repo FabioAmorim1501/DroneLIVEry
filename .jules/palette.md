@@ -18,3 +18,7 @@
 ## 2024-06-04 - Improve feedback states in Delphi async actions
 **Learning:** Adding immediate loading states and post-action confirmations to UI elements vastly improves perceived performance. Furthermore, reading UI state (like `FEditWaypoint.Text`) inside an async callback introduces a race condition; state must be captured *before* making the asynchronous request.
 **Action:** Always provide visual validation for map inputs and asynchronous tasks. Ensure thread safety by capturing UI values into local variables prior to the async call and by performing UI updates via `TThread.Synchronize`.
+
+## 2026-06-06 - [Disabled state on async actions]
+**Learning:** To prevent race conditions and overlapping requests during asynchronous operations in Delphi FMX, triggering UI action buttons must be disabled before starting the thread and re-enabled inside the `TThread.Synchronize` block.
+**Action:** Always disable action buttons before async calls and use `TThread.Synchronize` to safely re-enable them in the callback.
