@@ -474,6 +474,7 @@ begin
   LID := TCornerButton(Sender).TagString;
   LDist := StrToFloatDef(FModalEditDist.Text, 10.0);
   FModalLblResult.Visible := True; FModalLblResult.Text := 'Calculando...';
+  if Assigned(FModalBtnConfirm) then FModalBtnConfirm.Enabled := False;
   TThread.CreateAnonymousThread(procedure
   var LAns: string;
   begin
@@ -482,6 +483,7 @@ begin
     begin
       if Assigned(LBtn) then LBtn.Enabled := True;
       FModalLblResult.Text := LAns; FModalBtnClose.Text := 'Fechar';
+      if Assigned(FModalBtnConfirm) then FModalBtnConfirm.Enabled := True;
     end);
   end).Start;
 end;
