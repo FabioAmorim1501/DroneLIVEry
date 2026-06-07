@@ -375,16 +375,38 @@ procedure TViewDashboard.btnRefreshClick(Sender: TObject);
 var LAni: TAniIndicator;
 begin
   ClearDroneCards;
+  btnRefresh.Enabled := False;
   LAni := TAniIndicator.Create(Self); LAni.Parent := Self; LAni.Align := TAlignLayout.Center; LAni.Enabled := True;
   TThread.CreateAnonymousThread(procedure
   var LLista: TObjectList<TDroneDTO>;
   begin
     LLista := FViewModel.LoadDrones;
     TThread.Synchronize(nil, procedure
-    var LDrone: TDroneDTO;
+    var
+      LDrone: TDroneDTO;
+      LEmptyCard: TRectangle;
+      LEmptyLbl: TLabel;
     begin
       LAni.Enabled := False; LAni.Free;
-      if Assigned(LLista) then try for LDrone in LLista do BuildDroneCard(LDrone); finally LLista.Free; end;
+      btnRefresh.Enabled := True;
+      if Assigned(LLista) and (LLista.Count > 0) then
+      begin
+        try
+          for LDrone in LLista do BuildDroneCard(LDrone);
+        finally
+          LLista.Free;
+        end;
+      end
+      else
+      begin
+        if Assigned(LLista) then LLista.Free;
+        LEmptyCard := TRectangle.Create(ScrollDrones); LEmptyCard.Parent := ScrollDrones; LEmptyCard.Align := TAlignLayout.Top;
+        LEmptyCard.Height := 60; LEmptyCard.Margins.Bottom := 15; LEmptyCard.Fill.Color := COLOR_WHITE; LEmptyCard.Stroke.Kind := TBrushKind.None;
+        LEmptyCard.XRadius := 8; LEmptyCard.YRadius := 8;
+        LEmptyLbl := MakeLabel(LEmptyCard, 'Nenhuma aeronave dispon'#237'vel no momento.', 14, COLOR_MUTED, False);
+        LEmptyLbl.Align := TAlignLayout.Client; LEmptyLbl.TextSettings.HorzAlign := TTextAlign.Center;
+        FCards.Add(LEmptyCard);
+      end;
     end);
   end).Start;
 end;

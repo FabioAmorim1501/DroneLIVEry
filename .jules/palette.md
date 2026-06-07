@@ -22,3 +22,7 @@
 ## 2024-06-05 - Disabling UI elements during async operations
 **Learning:** Not disabling action buttons (like "Calcular") when an asynchronous request starts allows the user to click the button multiple times, launching simultaneous overlapping requests which can result in race conditions and poor visual feedback.
 **Action:** Always disable buttons triggering async actions immediately, and re-enable them (if appropriate) inside the `TThread.Synchronize` block after the action completes to provide clear micro-UX feedback.
+
+## 2024-06-07 - Empty States and List Lifecycle
+**Learning:** Adding explicit empty states directly managed within the existing UI list lifecycle (e.g., adding an empty state `TRectangle` to the `FCards` list instead of creating a standalone hidden element) prevents ghost-element memory leaks, simplifies state management, and significantly improves UX feedback when lists load empty.
+**Action:** When populating dynamic lists, always handle the empty dataset case by creating explicit empty state elements that hook directly into the list's clear/populate lifecycle.
