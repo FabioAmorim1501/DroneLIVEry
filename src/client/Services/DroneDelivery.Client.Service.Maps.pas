@@ -51,10 +51,30 @@ end;
 { TMapService }
 
 class function TMapService.UrlEncodeUtf8(const S: string): string;
+var
+  Bytes: TBytes;
+  I: Integer;
+  LBuilder: TStringBuilder;
 begin
-  // ⚡ Bolt: Performance Fix - Prevent O(N^2) memory reallocation overhead during string concatenation
-  // Use native optimized URL encoding from System.NetEncoding instead of byte-by-byte manual concatenation
-  Result := TNetEncoding.URL.Encode(S);
+  Bytes := TEncoding.UTF8.GetBytes(S);
+
+  // ⚡ Bolt: Performance Fix - Replaced O(N^2) string concatenation with TStringBuilder.
+  // Pre-allocating capacity prevents constant memory reallocations inside the loop, improving encoding speed.
+  LBuilder := TStringBuilder.Create(Length(Bytes) * 3);
+  try
+    for I := 0 to High(Bytes) do
+    begin
+      if Bytes[I] in [$30..$39, $41..$5A, $61..$7A, Ord('-'), Ord('_'), Ord('.'), Ord('~')] then
+        LBuilder.Append(Chr(Bytes[I]))
+      else if Bytes[I] = Ord(' ') then
+        LBuilder.Append('+')
+      else
+        LBuilder.Append('%').Append(IntToHex(Bytes[I], 2));
+    end;
+    Result := LBuilder.ToString;
+  finally
+    LBuilder.Free;
+  end;
 end;
 
 class procedure TMapService.GeocodeAddressAsync(const AAddress: string; AOnSuccess: TProc<Double, Double>; AOnError: TProc<string>);

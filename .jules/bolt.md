@@ -10,6 +10,10 @@
 **Learning:** Using `SetLength(Array, Length(Array) + 1)` inside loops causes O(N^2) memory reallocation overhead as Delphi creates a new block and copies the array each time. This creates a severe performance bottleneck for large datasets (e.g., retrieving lists from DB repositories).
 **Action:** When array size is known in advance, pre-allocate `SetLength(Array, Count)`. When size is unknown (e.g., iterating a database query), buffer the elements using `System.Generics.Collections.TList<T>`, then call `.ToArray()` at the end of the loop.
 
-## 2024-06-05 - O(N²) String Concatenation Reallocation Overhead
-**Learning:** Found an O(N²) anti-pattern where a string was being dynamically constructed inside a loop using repeated concatenation (`Result := Result + ...`) during URL encoding. Since Delphi strings are immutable dynamic arrays of characters, this triggers O(N²) memory reallocation and copying.
-**Action:** Always avoid manual string concatenation in loops for tasks like encoding. Use native, optimized libraries (like `System.NetEncoding.TNetEncoding.URL.Encode`) or buffer with `TStringBuilder` when manual construction is strictly required.
+## 2024-05-31 - TField Caching to Prevent O(N) String Lookups
+**Learning:** Calling `FieldByName('FieldName')` inside a database fetch loop (`while not Qry.Eof do`) is highly inefficient because it performs a sequential or map lookup by string for every field, on every row iteration. This results in significant overhead for large datasets.
+**Action:** When iterating through database records, always extract and cache the `TField` references (e.g., `FldId := Qry.FieldByName('id');`) outside of the loop, then access their values (`FldId.AsString`) inside the loop.
+
+## 2024-06-06 - O(N²) String Concatenation Penalty in String Parsers/Encoders
+**Learning:** In Delphi, strings are immutable under the hood when appended to dynamically. Using `Result := Result + ...` inside a loop (especially for parsers or encoders where `N` is the number of characters/bytes) forces constant memory reallocation and data copying. This creates a severe O(N²) performance bottleneck, particularly noticeable in networking functions like URL encoders or JSON builders when handling large payloads.
+**Action:** When building strings iteratively inside loops, always use `System.SysUtils.TStringBuilder`. Pre-allocate the expected capacity using `TStringBuilder.Create(ExpectedSize)` to achieve true O(N) complexity with zero internal reallocation overhead.

@@ -196,7 +196,6 @@ begin
         if (LDrone.PayloadMaximo < 0) or (LDrone.AutonomiaKm < 0) or (LDrone.BatteryWh < 0) or (LDrone.VelocidadeKmH < 0) then
         begin
           Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
-          LDrone.Free;
           Exit;
         end;
 
