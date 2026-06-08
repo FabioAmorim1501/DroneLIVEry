@@ -98,6 +98,7 @@ type
     FLblCrudStatus: TLabel;
 
     { --- Módulo: Frota --- }
+    procedure BuildEmptyStateCard;
     procedure BuildDroneCard(ADrone: TDroneDTO);
     procedure ClearDroneCards;
     procedure SetActiveView(AView: TActiveView);
@@ -375,6 +376,7 @@ procedure TViewDashboard.btnRefreshClick(Sender: TObject);
 var LAni: TAniIndicator;
 begin
   ClearDroneCards;
+  btnRefresh.Enabled := False;
   LAni := TAniIndicator.Create(Self); LAni.Parent := Self; LAni.Align := TAlignLayout.Center; LAni.Enabled := True;
   TThread.CreateAnonymousThread(procedure
   var LLista: TObjectList<TDroneDTO>;
@@ -384,7 +386,19 @@ begin
     var LDrone: TDroneDTO;
     begin
       LAni.Enabled := False; LAni.Free;
-      if Assigned(LLista) then try for LDrone in LLista do BuildDroneCard(LDrone); finally LLista.Free; end;
+      btnRefresh.Enabled := True;
+
+      if Assigned(LLista) then
+      try
+        if LLista.Count = 0 then
+          BuildEmptyStateCard
+        else
+          for LDrone in LLista do BuildDroneCard(LDrone);
+      finally
+        LLista.Free;
+      end
+      else
+        BuildEmptyStateCard;
     end);
   end).Start;
 end;
@@ -394,6 +408,29 @@ var LCard: TRectangle;
 begin
   for LCard in FCards do LCard.Free;
   FCards.Clear;
+end;
+
+procedure TViewDashboard.BuildEmptyStateCard;
+var
+  LCard: TRectangle;
+  LLayoutText: TLayout;
+  LLblTitle, LLblGuidance: TLabel;
+begin
+  LCard := TRectangle.Create(ScrollDrones); LCard.Parent := ScrollDrones; LCard.Align := TAlignLayout.Top;
+  LCard.Height := 120; LCard.Margins.Bottom := 15; LCard.Fill.Color := COLOR_WHITE; LCard.Stroke.Kind := TBrushKind.None;
+  LCard.XRadius := 8; LCard.YRadius := 8;
+
+  LLayoutText := TLayout.Create(LCard); LLayoutText.Parent := LCard; LLayoutText.Align := TAlignLayout.Client;
+
+  LLblTitle := MakeLabel(LLayoutText, 'Sua frota est'#225' vazia', 16, COLOR_DARK, True);
+  LLblTitle.Align := TAlignLayout.Top; LLblTitle.Height := 40; LLblTitle.Margins.Top := 30;
+  LLblTitle.TextSettings.HorzAlign := TTextAlign.Center;
+
+  LLblGuidance := MakeLabel(LLayoutText, 'Cadastre novos modelos na aba Esta'#231#227'o.', 13, COLOR_MUTED, False);
+  LLblGuidance.Align := TAlignLayout.Top; LLblGuidance.Height := 30;
+  LLblGuidance.TextSettings.HorzAlign := TTextAlign.Center;
+
+  FCards.Add(LCard);
 end;
 
 procedure TViewDashboard.BuildDroneCard(ADrone: TDroneDTO);
