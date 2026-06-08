@@ -22,3 +22,7 @@
 ## 2024-06-05 - Disabling UI elements during async operations
 **Learning:** Not disabling action buttons (like "Calcular") when an asynchronous request starts allows the user to click the button multiple times, launching simultaneous overlapping requests which can result in race conditions and poor visual feedback.
 **Action:** Always disable buttons triggering async actions immediately, and re-enable them (if appropriate) inside the `TThread.Synchronize` block after the action completes to provide clear micro-UX feedback.
+
+## 2024-06-06 - Explicit Empty States in FMX Dynamic Lists
+**Learning:** In Delphi FMX, when populating dynamic lists (like the fleet dashboard), if the data source is empty, simply clearing the list leaves users confused. Furthermore, appending explicit empty state UI elements (e.g., an empty `TRectangle` with text) directly to the managed collection (`FCards`) prevents ghost-element memory leaks and naturally integrates into the existing clear/populate lifecycles.
+**Action:** Always provide explicit, visually distinct Empty State elements in dynamic collections that explain why the view is empty and offer an actionable next step to resolve it. Manage these elements via the same list component lifecycle to prevent memory leaks.
