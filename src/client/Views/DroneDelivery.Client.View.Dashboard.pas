@@ -99,6 +99,7 @@ type
 
     { --- Módulo: Frota --- }
     procedure BuildDroneCard(ADrone: TDroneDTO);
+    procedure BuildEmptyStateCard(const AMessage: string);
     procedure ClearDroneCards;
     procedure SetActiveView(AView: TActiveView);
     procedure UpdateMenuHighlight(AActive: TActiveView);
@@ -374,6 +375,7 @@ procedure TViewDashboard.MenuCrudClick(Sender: TObject); begin SetActiveView(avC
 procedure TViewDashboard.btnRefreshClick(Sender: TObject);
 var LAni: TAniIndicator;
 begin
+  btnRefresh.Enabled := False;
   ClearDroneCards;
   LAni := TAniIndicator.Create(Self); LAni.Parent := Self; LAni.Align := TAlignLayout.Center; LAni.Enabled := True;
   TThread.CreateAnonymousThread(procedure
@@ -384,7 +386,15 @@ begin
     var LDrone: TDroneDTO;
     begin
       LAni.Enabled := False; LAni.Free;
-      if Assigned(LLista) then try for LDrone in LLista do BuildDroneCard(LDrone); finally LLista.Free; end;
+      btnRefresh.Enabled := True;
+      try
+        if not Assigned(LLista) or (LLista.Count = 0) then
+          BuildEmptyStateCard('Nenhuma aeronave encontrada na frota.')
+        else
+          for LDrone in LLista do BuildDroneCard(LDrone);
+      finally
+        if Assigned(LLista) then LLista.Free;
+      end;
     end);
   end).Start;
 end;
@@ -446,6 +456,31 @@ begin
 
   LLblSpec := MakeLabel(LLayoutText, Format('%g Kg | %g Km | %g Km/h', [ADrone.max_payload_kg, ADrone.max_range_km, ADrone.speed_kmh]), 12, COLOR_MUTED);
   LLblSpec.Align := TAlignLayout.Bottom; LLblSpec.Height := 25;
+
+  FCards.Add(LCard);
+end;
+
+procedure TViewDashboard.BuildEmptyStateCard(const AMessage: string);
+var
+  LCard: TRectangle;
+  LLblMessage: TLabel;
+begin
+  LCard := TRectangle.Create(ScrollDrones);
+  LCard.Parent := ScrollDrones;
+  LCard.Align := TAlignLayout.Top;
+  LCard.Height := 80;
+  LCard.Margins.Bottom := 15;
+  LCard.Fill.Color := COLOR_BG;
+  LCard.Stroke.Kind := TBrushKind.Dash;
+  LCard.Stroke.Color := COLOR_MUTED;
+  LCard.Stroke.Thickness := 2;
+  LCard.XRadius := 8;
+  LCard.YRadius := 8;
+
+  LLblMessage := MakeLabel(LCard, AMessage, 14, COLOR_MUTED, False);
+  LLblMessage.Align := TAlignLayout.Client;
+  LLblMessage.TextSettings.HorzAlign := TTextAlign.Center;
+  LLblMessage.TextSettings.VertAlign := TTextAlign.Center;
 
   FCards.Add(LCard);
 end;
