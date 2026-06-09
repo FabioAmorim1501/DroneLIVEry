@@ -22,3 +22,7 @@
 ## 2024-06-05 - Disabling UI elements during async operations
 **Learning:** Not disabling action buttons (like "Calcular") when an asynchronous request starts allows the user to click the button multiple times, launching simultaneous overlapping requests which can result in race conditions and poor visual feedback.
 **Action:** Always disable buttons triggering async actions immediately, and re-enable them (if appropriate) inside the `TThread.Synchronize` block after the action completes to provide clear micro-UX feedback.
+
+## 2024-06-06 - Manage empty states within FMX lists dynamically
+**Learning:** In Delphi FMX, when populating dynamic lists, manage empty states by creating explicit UI elements (e.g., an empty state `TRectangle`) and adding them directly to the list's managed collection rather than using standalone hidden elements. This prevents ghost-element memory leaks and integrates smoothly with existing clear/populate lifecycles.
+**Action:** Always provide explicit loading and empty states when dealing with dynamic list data and ensure that these components belong to the list's primary collection. Disable buttons that trigger these async requests to prevent duplications.
