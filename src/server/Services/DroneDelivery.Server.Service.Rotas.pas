@@ -51,12 +51,14 @@ var
   LPedidosPendentes: TList<TPedidoEntity>;
   LLocaisMap: TDictionary<string, TLocalEntity>;
   LPedidoDestinos: TDictionary<TPedidoEntity, TLocalEntity>;
+  LDistanciasRegressoCache: TDictionary<TLocalEntity, Double>;
   I, LMelhorIndex: Integer;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
   LLocaisMap := TDictionary<string, TLocalEntity>.Create;
   LPedidoDestinos := TDictionary<TPedidoEntity, TLocalEntity>.Create;
+  LDistanciasRegressoCache := TDictionary<TLocalEntity, Double>.Create;
   try
     // 1. Localiza a Base Operacional (Hub) e indexa os locais para O(1) lookup
     LLocalHub := nil;
@@ -70,6 +72,15 @@ begin
 
     if LLocalHub = nil then
       raise Exception.Create('Falha de roteamento: Base operacional (Hub) não localizada na matriz de locais.');
+
+    // Pré-calcula a distância de regresso de cada local de destino para o Hub
+    for LLocalDestino in ALocais do
+    begin
+      if LLocalDestino.Tipo <> ltBase then
+      begin
+        LDistanciasRegressoCache.AddOrSetValue(LLocalDestino, CalcularDistanciaKm(LLocalDestino.Latitude, LLocalDestino.Longitude, LLocalHub.Latitude, LLocalHub.Longitude));
+      end;
+    end;
 
     // 2. Alimenta a fila de processamento em memória
     for LPedido in APedidos do
@@ -121,9 +132,11 @@ begin
 
           if LDistanciaAtePedido < LMenorDistancia then
           begin
-            // Projetar o custo de bateria para o regresso à base
-            LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
-                                                      LLocalHub.Latitude, LLocalHub.Longitude);
+            // ⚡ Bolt: Performance Fix - Use pre-calculated return distance from O(1) Hash Map
+            // Avoids O(N^2) Haversine trigonometric distance recalculations for static hub routes.
+            if not LDistanciasRegressoCache.TryGetValue(LLocalDestinoCandidato, LDistanciaRegresso) then
+              LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
+                                                        LLocalHub.Latitude, LLocalHub.Longitude);
 
             // Validação absoluta das restrições de autonomia da aeronave
             if (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
@@ -178,6 +191,7 @@ begin
 
     Result := LArrayRotas.ToJSON;
   finally
+    LDistanciasRegressoCache.Free;
     LPedidoDestinos.Free;
     LLocaisMap.Free;
     LPedidosPendentes.Free;
