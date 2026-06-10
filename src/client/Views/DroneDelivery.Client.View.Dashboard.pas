@@ -99,6 +99,7 @@ type
 
     { --- Módulo: Frota --- }
     procedure BuildDroneCard(ADrone: TDroneDTO);
+    procedure BuildEmptyStateCard;
     procedure ClearDroneCards;
     procedure SetActiveView(AView: TActiveView);
     procedure UpdateMenuHighlight(AActive: TActiveView);
@@ -374,6 +375,7 @@ procedure TViewDashboard.MenuCrudClick(Sender: TObject); begin SetActiveView(avC
 procedure TViewDashboard.btnRefreshClick(Sender: TObject);
 var LAni: TAniIndicator;
 begin
+  if Assigned(btnRefresh) then btnRefresh.Enabled := False;
   ClearDroneCards;
   LAni := TAniIndicator.Create(Self); LAni.Parent := Self; LAni.Align := TAlignLayout.Center; LAni.Enabled := True;
   TThread.CreateAnonymousThread(procedure
@@ -384,7 +386,21 @@ begin
     var LDrone: TDroneDTO;
     begin
       LAni.Enabled := False; LAni.Free;
-      if Assigned(LLista) then try for LDrone in LLista do BuildDroneCard(LDrone); finally LLista.Free; end;
+      if Assigned(LLista) then
+      begin
+        try
+          if LLista.Count > 0 then
+            for LDrone in LLista do BuildDroneCard(LDrone)
+          else
+            BuildEmptyStateCard;
+        finally
+          LLista.Free;
+        end;
+      end
+      else
+        BuildEmptyStateCard;
+
+      if Assigned(btnRefresh) then btnRefresh.Enabled := True;
     end);
   end).Start;
 end;
@@ -394,6 +410,23 @@ var LCard: TRectangle;
 begin
   for LCard in FCards do LCard.Free;
   FCards.Clear;
+end;
+
+procedure TViewDashboard.BuildEmptyStateCard;
+var
+  LCard: TRectangle;
+  LLblMessage: TLabel;
+begin
+  LCard := TRectangle.Create(ScrollDrones); LCard.Parent := ScrollDrones; LCard.Align := TAlignLayout.Top;
+  LCard.Height := 80; LCard.Margins.Bottom := 15; LCard.Fill.Color := COLOR_WHITE; LCard.Stroke.Kind := TBrushKind.None;
+  LCard.XRadius := 8; LCard.YRadius := 8;
+
+  LLblMessage := MakeLabel(LCard, 'Nenhuma aeronave encontrada. Tente novamente.', 14, COLOR_MUTED);
+  LLblMessage.Align := TAlignLayout.Client;
+  LLblMessage.TextSettings.HorzAlign := TTextAlign.Center;
+  LLblMessage.TextSettings.VertAlign := TTextAlign.Center;
+
+  FCards.Add(LCard);
 end;
 
 procedure TViewDashboard.BuildDroneCard(ADrone: TDroneDTO);
