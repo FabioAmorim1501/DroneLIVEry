@@ -22,3 +22,7 @@
 ## 2024-06-05 - Disabling UI elements during async operations
 **Learning:** Not disabling action buttons (like "Calcular") when an asynchronous request starts allows the user to click the button multiple times, launching simultaneous overlapping requests which can result in race conditions and poor visual feedback.
 **Action:** Always disable buttons triggering async actions immediately, and re-enable them (if appropriate) inside the `TThread.Synchronize` block after the action completes to provide clear micro-UX feedback.
+
+## 2024-06-06 - Disabling Refresh Button and Adding Explicit Empty States
+**Learning:** Not disabling the Refresh button during asynchronous operations allows users to rapidly fire requests, leading to poor UX and potential race conditions. Furthermore, relying on empty screen spaces instead of explicit Empty State elements provides poor UX and makes it harder for users to understand that lists are completely loaded but yield no results.
+**Action:** Always disable action buttons (e.g. Refresh) triggering async operations before threading and re-enable them within `TThread.Synchronize`. In addition, create explicit Empty State UI elements (like a `TRectangle`) for dynamically loaded lists, adding them directly to the active collection to cleanly reuse the clearing lifecycle.
