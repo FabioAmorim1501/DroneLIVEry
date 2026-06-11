@@ -51,12 +51,14 @@ var
   LPedidosPendentes: TList<TPedidoEntity>;
   LLocaisMap: TDictionary<string, TLocalEntity>;
   LPedidoDestinos: TDictionary<TPedidoEntity, TLocalEntity>;
+  LPedidoDistanciaRegresso: TDictionary<TPedidoEntity, Double>;
   I, LMelhorIndex: Integer;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
   LLocaisMap := TDictionary<string, TLocalEntity>.Create;
   LPedidoDestinos := TDictionary<TPedidoEntity, TLocalEntity>.Create;
+  LPedidoDistanciaRegresso := TDictionary<TPedidoEntity, Double>.Create;
   try
     // 1. Localiza a Base Operacional (Hub) e indexa os locais para O(1) lookup
     LLocalHub := nil;
@@ -76,7 +78,13 @@ begin
     begin
       LPedidosPendentes.Add(LPedido);
       if LLocaisMap.TryGetValue(LPedido.LocalDestinoId.ToString, LLocalDestinoCandidato) then
+      begin
         LPedidoDestinos.AddOrSetValue(LPedido, LLocalDestinoCandidato);
+        // ⚡ Bolt: Performance Fix - Pre-calculate and cache return distance to avoid Haversine O(N^2)
+        LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
+                                                  LLocalHub.Latitude, LLocalHub.Longitude);
+        LPedidoDistanciaRegresso.AddOrSetValue(LPedido, LDistanciaRegresso);
+      end;
     end;
 
     // 3. Orquestração da Frota
@@ -122,8 +130,9 @@ begin
           if LDistanciaAtePedido < LMenorDistancia then
           begin
             // Projetar o custo de bateria para o regresso à base
-            LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
-                                                      LLocalHub.Latitude, LLocalHub.Longitude);
+            // ⚡ Bolt: Performance Fix - Retrieve pre-computed distance in O(1)
+            if not LPedidoDistanciaRegresso.TryGetValue(LPedido, LDistanciaRegresso) then
+              Continue;
 
             // Validação absoluta das restrições de autonomia da aeronave
             if (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
@@ -178,6 +187,7 @@ begin
 
     Result := LArrayRotas.ToJSON;
   finally
+    LPedidoDistanciaRegresso.Free;
     LPedidoDestinos.Free;
     LLocaisMap.Free;
     LPedidosPendentes.Free;
