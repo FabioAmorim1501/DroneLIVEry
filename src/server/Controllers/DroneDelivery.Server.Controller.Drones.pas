@@ -185,31 +185,33 @@ begin
       LDrone := LRepo.GetById(Req.Params['drone_id']);
       if Assigned(LDrone) then
       begin
-        LDrone.Nome := GetJsonString(LBody, 'name', LDrone.Nome);
-        LDrone.PayloadMaximo := GetJsonDouble(LBody, 'max_payload_kg', LDrone.PayloadMaximo);
-        LDrone.AutonomiaKm := GetJsonDouble(LBody, 'max_range_km', LDrone.AutonomiaKm);
-        LDrone.BatteryWh := GetJsonDouble(LBody, 'battery_wh', LDrone.BatteryWh);
-        LDrone.VelocidadeKmH := GetJsonDouble(LBody, 'speed_kmh', LDrone.VelocidadeKmH);
-        LDrone.ImageUrl := GetJsonString(LBody, 'image_url', LDrone.ImageUrl);
-        LDrone.Status := GetJsonString(LBody, 'status', LDrone.Status);
-
-        if (LDrone.PayloadMaximo < 0) or (LDrone.AutonomiaKm < 0) or (LDrone.BatteryWh < 0) or (LDrone.VelocidadeKmH < 0) then
-        begin
-          Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
-          Exit;
-        end;
-
-        LRepo.Update(LDrone);
-
-        var LResObj := TJSONObject.Create;
         try
-          LResObj.AddPair('message', 'Drone Atualizado no BD');
-          Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
-        finally
-          LResObj.Free;
-        end;
+          LDrone.Nome := GetJsonString(LBody, 'name', LDrone.Nome);
+          LDrone.PayloadMaximo := GetJsonDouble(LBody, 'max_payload_kg', LDrone.PayloadMaximo);
+          LDrone.AutonomiaKm := GetJsonDouble(LBody, 'max_range_km', LDrone.AutonomiaKm);
+          LDrone.BatteryWh := GetJsonDouble(LBody, 'battery_wh', LDrone.BatteryWh);
+          LDrone.VelocidadeKmH := GetJsonDouble(LBody, 'speed_kmh', LDrone.VelocidadeKmH);
+          LDrone.ImageUrl := GetJsonString(LBody, 'image_url', LDrone.ImageUrl);
+          LDrone.Status := GetJsonString(LBody, 'status', LDrone.Status);
 
-        LDrone.Free;
+          if (LDrone.PayloadMaximo < 0) or (LDrone.AutonomiaKm < 0) or (LDrone.BatteryWh < 0) or (LDrone.VelocidadeKmH < 0) then
+          begin
+            Res.Status(400).Send('{"error": "Drone metrics cannot be negative"}');
+            Exit;
+          end;
+
+          LRepo.Update(LDrone);
+
+          var LResObj := TJSONObject.Create;
+          try
+            LResObj.AddPair('message', 'Drone Atualizado no BD');
+            Res.Status(200).ContentType('application/json').Send(LResObj.ToJSON);
+          finally
+            LResObj.Free;
+          end;
+        finally
+          LDrone.Free;
+        end;
       end
       else
       begin

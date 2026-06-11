@@ -26,3 +26,7 @@
 **Vulnerability:** Adding the backend `API_SECRET_KEY` environment variable check to the FMX client app exposes the backend master secret, requiring it to be bundled or accessible in the client environment.
 **Learning:** Client applications (frontend) should never manage, know, or require server-side backend secrets. They must rely on user-authenticated tokens (like JWTs) acquired via login.
 **Prevention:** Never use `GetEnvironmentVariable` to retrieve backend API secrets inside frontend/client code. Authentication changes must correctly split client-session logic from backend-secret logic.
+## 2024-06-11 - [MEDIUM] Prevent Memory Leak DoS by ensuring objects are freed on early Exit
+**Vulnerability:** In `src/server/Controllers/DroneDelivery.Server.Controller.Drones.pas`'s `PutDrone` procedure, `LDrone` was fetched from the database, but if validation of drone metrics failed, the code called `Exit;` prematurely before reaching the `LDrone.Free;` statement at the end of the block. This caused a memory leak on every failed validation attempt, which could lead to Denial of Service (DoS) via memory exhaustion.
+**Learning:** Calling `Exit;` skips any subsequent code in the current block. If an object is manually freed at the end of a block, an early `Exit` will leak it.
+**Prevention:** Always wrap dynamically allocated objects inside a `try..finally` block where the `finally` clause guarantees the object is freed, even if an early `Exit;` or an exception occurs within the `try` block.
