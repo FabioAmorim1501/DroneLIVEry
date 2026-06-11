@@ -99,6 +99,7 @@ type
 
     { --- Módulo: Frota --- }
     procedure BuildDroneCard(ADrone: TDroneDTO);
+    procedure BuildEmptyStateCard;
     procedure ClearDroneCards;
     procedure SetActiveView(AView: TActiveView);
     procedure UpdateMenuHighlight(AActive: TActiveView);
@@ -375,6 +376,7 @@ procedure TViewDashboard.btnRefreshClick(Sender: TObject);
 var LAni: TAniIndicator;
 begin
   ClearDroneCards;
+  btnRefresh.Enabled := False;
   LAni := TAniIndicator.Create(Self); LAni.Parent := Self; LAni.Align := TAlignLayout.Center; LAni.Enabled := True;
   TThread.CreateAnonymousThread(procedure
   var LLista: TObjectList<TDroneDTO>;
@@ -384,7 +386,16 @@ begin
     var LDrone: TDroneDTO;
     begin
       LAni.Enabled := False; LAni.Free;
-      if Assigned(LLista) then try for LDrone in LLista do BuildDroneCard(LDrone); finally LLista.Free; end;
+      btnRefresh.Enabled := True;
+      if Assigned(LLista) and (LLista.Count > 0) then
+      begin
+        try for LDrone in LLista do BuildDroneCard(LDrone); finally LLista.Free; end;
+      end
+      else
+      begin
+        if Assigned(LLista) then LLista.Free;
+        BuildEmptyStateCard;
+      end;
     end);
   end).Start;
 end;
@@ -394,6 +405,24 @@ var LCard: TRectangle;
 begin
   for LCard in FCards do LCard.Free;
   FCards.Clear;
+end;
+
+procedure TViewDashboard.BuildEmptyStateCard;
+var
+  LCard: TRectangle;
+  LLblText: TLabel;
+begin
+  LCard := TRectangle.Create(ScrollDrones); LCard.Parent := ScrollDrones; LCard.Align := TAlignLayout.Top;
+  LCard.Height := 100; LCard.Margins.Bottom := 15; LCard.Fill.Color := COLOR_BG; LCard.Stroke.Color := $FFEAECF0;
+  LCard.Stroke.Kind := TBrushKind.Solid; LCard.Stroke.Thickness := 2; LCard.Stroke.Dash := TStrokeDash.Dash;
+  LCard.XRadius := 8; LCard.YRadius := 8;
+
+  LLblText := MakeLabel(LCard, 'Nenhum drone dispon'#237'vel no momento.', 14, COLOR_MUTED, False);
+  LLblText.Align := TAlignLayout.Client;
+  LLblText.TextSettings.HorzAlign := TTextAlign.Center;
+  LLblText.TextSettings.VertAlign := TTextAlign.Center;
+
+  FCards.Add(LCard);
 end;
 
 procedure TViewDashboard.BuildDroneCard(ADrone: TDroneDTO);
