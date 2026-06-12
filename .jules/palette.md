@@ -22,3 +22,6 @@
 ## 2024-06-05 - Disabling UI elements during async operations
 **Learning:** Not disabling action buttons (like "Calcular") when an asynchronous request starts allows the user to click the button multiple times, launching simultaneous overlapping requests which can result in race conditions and poor visual feedback.
 **Action:** Always disable buttons triggering async actions immediately, and re-enable them (if appropriate) inside the `TThread.Synchronize` block after the action completes to provide clear micro-UX feedback.
+## 2024-06-05 - Visual Feedback during Route Calculation
+**Learning:** During the async calculation of a map route, keeping the triggering button enabled and without a text indicator confused the user and allowed overlapping requests, violating good UX. The codebase uses `MakeButton` which returns a `TCornerButton`.
+**Action:** Always disable buttons (`Sender is TCornerButton`) and provide text feedback (e.g. 'Calculando...') immediately before triggering asynchronous map or view model calls, making sure to reset state inside a `TThread.Synchronize` block.
