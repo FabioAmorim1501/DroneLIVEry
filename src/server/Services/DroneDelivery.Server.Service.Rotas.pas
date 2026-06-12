@@ -51,12 +51,14 @@ var
   LPedidosPendentes: TList<TPedidoEntity>;
   LLocaisMap: TDictionary<string, TLocalEntity>;
   LPedidoDestinos: TDictionary<TPedidoEntity, TLocalEntity>;
+  LDistanciasRegresso: TDictionary<TLocalEntity, Double>;
   I, LMelhorIndex: Integer;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
   LLocaisMap := TDictionary<string, TLocalEntity>.Create;
   LPedidoDestinos := TDictionary<TPedidoEntity, TLocalEntity>.Create;
+  LDistanciasRegresso := TDictionary<TLocalEntity, Double>.Create;
   try
     // 1. Localiza a Base Operacional (Hub) e indexa os locais para O(1) lookup
     LLocalHub := nil;
@@ -71,12 +73,19 @@ begin
     if LLocalHub = nil then
       raise Exception.Create('Falha de roteamento: Base operacional (Hub) não localizada na matriz de locais.');
 
-    // 2. Alimenta a fila de processamento em memória
+    // 2. Alimenta a fila de processamento em memória e pré-calcula distâncias estáticas
     for LPedido in APedidos do
     begin
       LPedidosPendentes.Add(LPedido);
       if LLocaisMap.TryGetValue(LPedido.LocalDestinoId.ToString, LLocalDestinoCandidato) then
+      begin
         LPedidoDestinos.AddOrSetValue(LPedido, LLocalDestinoCandidato);
+        if not LDistanciasRegresso.ContainsKey(LLocalDestinoCandidato) then
+        begin
+          // ⚡ Bolt: Performance Fix - Cache Haversine calculation to prevent O(N^2) evaluation
+          LDistanciasRegresso.Add(LLocalDestinoCandidato, CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude, LLocalHub.Latitude, LLocalHub.Longitude));
+        end;
+      end;
     end;
 
     // 3. Orquestração da Frota
@@ -122,8 +131,9 @@ begin
           if LDistanciaAtePedido < LMenorDistancia then
           begin
             // Projetar o custo de bateria para o regresso à base
-            LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
-                                                      LLocalHub.Latitude, LLocalHub.Longitude);
+            // ⚡ Bolt: Performance Fix - O(1) Dictionary Lookup for static expensive Math calculation
+            if not LDistanciasRegresso.TryGetValue(LLocalDestinoCandidato, LDistanciaRegresso) then
+              Continue;
 
             // Validação absoluta das restrições de autonomia da aeronave
             if (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
@@ -178,6 +188,7 @@ begin
 
     Result := LArrayRotas.ToJSON;
   finally
+    LDistanciasRegresso.Free;
     LPedidoDestinos.Free;
     LLocaisMap.Free;
     LPedidosPendentes.Free;
