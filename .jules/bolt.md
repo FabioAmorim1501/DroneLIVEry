@@ -17,3 +17,7 @@
 ## 2024-06-06 - O(N²) String Concatenation Penalty in String Parsers/Encoders
 **Learning:** In Delphi, strings are immutable under the hood when appended to dynamically. Using `Result := Result + ...` inside a loop (especially for parsers or encoders where `N` is the number of characters/bytes) forces constant memory reallocation and data copying. This creates a severe O(N²) performance bottleneck, particularly noticeable in networking functions like URL encoders or JSON builders when handling large payloads.
 **Action:** When building strings iteratively inside loops, always use `System.SysUtils.TStringBuilder`. Pre-allocate the expected capacity using `TStringBuilder.Create(ExpectedSize)` to achieve true O(N) complexity with zero internal reallocation overhead.
+
+## 2024-06-25 - Haversine Math Optimization in Geographic Routing
+**Learning:** In geographic routing algorithms (like Nearest Neighbor), calculating Haversine trigonometric distances (Sin, Cos, ArcTan2, Sqrt) for constant constraints like the "return-to-hub distance" inside tight loops introduces severe O(N^2) bottlenecks as the number of nodes increases.
+**Action:** Always pre-calculate complex, static mathematical distances during the linear pre-processing phase of the algorithm, caching them in an O(1) Hash Map/Dictionary to be accessed via `TryGetValue` inside the main algorithmic loop.
