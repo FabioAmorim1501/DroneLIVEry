@@ -26,3 +26,7 @@
 **Vulnerability:** Adding the backend `API_SECRET_KEY` environment variable check to the FMX client app exposes the backend master secret, requiring it to be bundled or accessible in the client environment.
 **Learning:** Client applications (frontend) should never manage, know, or require server-side backend secrets. They must rely on user-authenticated tokens (like JWTs) acquired via login.
 **Prevention:** Never use `GetEnvironmentVariable` to retrieve backend API secrets inside frontend/client code. Authentication changes must correctly split client-session logic from backend-secret logic.
+## 2024-06-03 - [HIGH] Prevent Memory Leak DoS via Unhandled Early Exit
+**Vulnerability:** In `src/server/Controllers/DroneDelivery.Server.Controller.Drones.pas`, `PutDrone` fetched a `TDroneEntity` object via `LRepo.GetById`. If subsequent payload validation failed, an explicit `Exit;` was called to return an HTTP 400 error. Because the object was not wrapped in a `try...finally` block, `LDrone.Free;` at the end of the method was skipped, causing a memory leak that could be exploited for Denial of Service (DoS).
+**Learning:** In Delphi/Object Pascal, allocating objects and relying on sequential execution to reach a `.Free;` statement is highly vulnerable to memory leaks if early returns (`Exit;`) or exceptions occur in the intervening code.
+**Prevention:** Always wrap dynamically allocated objects inside a `try..finally` block immediately after allocation or retrieval to ensure they are reliably freed (`.Free;`), even if `Exit;` is called during validation.
