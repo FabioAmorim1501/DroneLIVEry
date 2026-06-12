@@ -764,15 +764,38 @@ begin
     Exit;
   end;
   FLblMapStatus.Text := 'Calculando rota... aguarde.';
+
+  if Sender is TCornerButton then
+  begin
+    TCornerButton(Sender).Enabled := False;
+    TCornerButton(Sender).Text := 'Calculando...';
+  end;
+
   FViewModel.CalcularRota(FSelectedDroneId, FWaypoints,
     procedure(Resp: string)
     begin
       EnviarRotaAoMapa(Resp);
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.'; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.';
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := 'Calcular Rota';
+        end;
+      end);
     end,
     procedure(E: string)
     begin
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := E; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := E;
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := 'Calcular Rota';
+        end;
+      end);
     end);
 end;
 
