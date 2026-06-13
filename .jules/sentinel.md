@@ -26,3 +26,8 @@
 **Vulnerability:** Adding the backend `API_SECRET_KEY` environment variable check to the FMX client app exposes the backend master secret, requiring it to be bundled or accessible in the client environment.
 **Learning:** Client applications (frontend) should never manage, know, or require server-side backend secrets. They must rely on user-authenticated tokens (like JWTs) acquired via login.
 **Prevention:** Never use `GetEnvironmentVariable` to retrieve backend API secrets inside frontend/client code. Authentication changes must correctly split client-session logic from backend-secret logic.
+
+## 2024-06-13 - [DoS Risk] Unfreed memory on early return during validation
+**Vulnerability:** Memory Leak causing Denial of Service (DoS) in the Backend. Manually instantiated objects (`TDroneEntity`) were not wrapped in a `try..finally` block. Consequently, when validation constraints failed (`Exit;` was executed early), the `LDrone.Free` command at the end of the method was bypassed, resulting in an unrecoverable memory leak.
+**Learning:** In Delphi/Object Pascal, `Exit;` immediately halts execution and exits the current scope. If a dynamically allocated resource is waiting to be freed at the bottom of the scope, the allocation persists in memory indefinitely.
+**Prevention:** Always wrap dynamically allocated resources with a `try..finally` block immediately after instantiation. Even if `Exit;` or an unhandled exception is thrown, the Object Pascal runtime will guarantee the execution of the `finally` block to safely free the memory.
