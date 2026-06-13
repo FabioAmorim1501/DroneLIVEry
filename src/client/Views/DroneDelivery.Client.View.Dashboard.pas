@@ -716,15 +716,40 @@ begin
     FLblMapStatus.Text := 'Aten'#231#227'o: Digite um endere'#231'o v'#225'lido para adicionar.';
     Exit;
   end;
+
+  if Sender is TCornerButton then
+  begin
+    TCornerButton(Sender).Enabled := False;
+    TCornerButton(Sender).Text := 'Buscando...';
+  end;
+
   FLblMapStatus.Text := 'Buscando endere'#231'o...';
   TMapService.GeocodeAddressAsync(LSearchedText,
     procedure(Lat, Lng: Double)
     begin
-      TThread.Synchronize(nil, procedure begin AddWaypointToMap(LSearchedText, Lat, Lng); FEditWaypoint.Text := ''; FLblMapStatus.Text := 'Parada adicionada: ' + LSearchedText; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        AddWaypointToMap(LSearchedText, Lat, Lng);
+        FEditWaypoint.Text := '';
+        FLblMapStatus.Text := 'Parada adicionada: ' + LSearchedText;
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := '+ Adicionar Parada';
+        end;
+      end);
     end,
     procedure(E: string)
     begin
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := E; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := E;
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := '+ Adicionar Parada';
+        end;
+      end);
     end);
 end;
 
@@ -763,16 +788,39 @@ begin
     FLblMapStatus.Text := 'Aten'#231#227'o: Adicione pelo menos uma parada na miss'#227'o.';
     Exit;
   end;
+
+  if Sender is TCornerButton then
+  begin
+    TCornerButton(Sender).Enabled := False;
+    TCornerButton(Sender).Text := 'Calculando...';
+  end;
+
   FLblMapStatus.Text := 'Calculando rota... aguarde.';
   FViewModel.CalcularRota(FSelectedDroneId, FWaypoints,
     procedure(Resp: string)
     begin
       EnviarRotaAoMapa(Resp);
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.'; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.';
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := 'Calcular Rota';
+        end;
+      end);
     end,
     procedure(E: string)
     begin
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := E; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := E;
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := 'Calcular Rota';
+        end;
+      end);
     end);
 end;
 

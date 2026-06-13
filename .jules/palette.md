@@ -22,3 +22,7 @@
 ## 2024-06-05 - Disabling UI elements during async operations
 **Learning:** Not disabling action buttons (like "Calcular") when an asynchronous request starts allows the user to click the button multiple times, launching simultaneous overlapping requests which can result in race conditions and poor visual feedback.
 **Action:** Always disable buttons triggering async actions immediately, and re-enable them (if appropriate) inside the `TThread.Synchronize` block after the action completes to provide clear micro-UX feedback.
+
+## 2024-06-13 - Improve button text clarity during async operations
+**Learning:** Changing button text to a loading state (e.g. "Calculando...") along with disabling it provides much clearer visual feedback during asynchronous API calls compared to simply disabling the button, avoiding user confusion over whether the action was registered.
+**Action:** Always update the button `Text` property to describe the current loading action before starting the async task, and restore it inside `TThread.Synchronize` afterwards.
