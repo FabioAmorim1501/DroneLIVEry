@@ -752,6 +752,9 @@ begin
 end;
 
 procedure TViewDashboard.OnCalculateRouteClick(Sender: TObject);
+var
+  LBtnAction: TCornerButton;
+  LOriginalText: string;
 begin
   if FSelectedDroneId.IsEmpty then
   begin
@@ -763,16 +766,42 @@ begin
     FLblMapStatus.Text := 'Aten'#231#227'o: Adicione pelo menos uma parada na miss'#227'o.';
     Exit;
   end;
+
+  LBtnAction := nil;
+  if (Sender is TCornerButton) then
+  begin
+    LBtnAction := TCornerButton(Sender);
+    LOriginalText := LBtnAction.Text;
+    LBtnAction.Text := 'Calculando...';
+    LBtnAction.Enabled := False;
+  end;
+
   FLblMapStatus.Text := 'Calculando rota... aguarde.';
   FViewModel.CalcularRota(FSelectedDroneId, FWaypoints,
     procedure(Resp: string)
     begin
       EnviarRotaAoMapa(Resp);
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.'; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.';
+        if Assigned(LBtnAction) then
+        begin
+          LBtnAction.Text := LOriginalText;
+          LBtnAction.Enabled := True;
+        end;
+      end);
     end,
     procedure(E: string)
     begin
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := E; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := E;
+        if Assigned(LBtnAction) then
+        begin
+          LBtnAction.Text := LOriginalText;
+          LBtnAction.Enabled := True;
+        end;
+      end);
     end);
 end;
 
