@@ -22,3 +22,7 @@
 ## 2024-06-05 - Disabling UI elements during async operations
 **Learning:** Not disabling action buttons (like "Calcular") when an asynchronous request starts allows the user to click the button multiple times, launching simultaneous overlapping requests which can result in race conditions and poor visual feedback.
 **Action:** Always disable buttons triggering async actions immediately, and re-enable them (if appropriate) inside the `TThread.Synchronize` block after the action completes to provide clear micro-UX feedback.
+
+## 2026-06-14 - Prevent multiple submissions via UX loading states
+**Learning:** In asynchronous actions (like map calculation), failure to implement a loading state on the triggering button allows users to click multiple times. This not only results in poor visual feedback but can cause race conditions or duplicate network requests.
+**Action:** Always disable action buttons and change their text to a loading indicator immediately when an async request starts, and re-enable them inside a synchronized UI thread callback once the action is complete.
