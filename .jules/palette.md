@@ -22,3 +22,7 @@
 ## 2024-06-05 - Disabling UI elements during async operations
 **Learning:** Not disabling action buttons (like "Calcular") when an asynchronous request starts allows the user to click the button multiple times, launching simultaneous overlapping requests which can result in race conditions and poor visual feedback.
 **Action:** Always disable buttons triggering async actions immediately, and re-enable them (if appropriate) inside the `TThread.Synchronize` block after the action completes to provide clear micro-UX feedback.
+
+## 2025-02-14 - FMX Button State and Safe Casting in Async Operations
+**Learning:** In Delphi FMX, triggering UI action buttons (like `TCornerButton`) during asynchronous operations (e.g., fetching routes or geocoding) without providing immediate feedback can result in users clicking multiple times, causing race conditions or overlapping requests. Because action events pass a generic `Sender: TObject`, one must safely cast it back to the specific button type (e.g., `if Sender is TCornerButton then TCornerButton(Sender)`) to manipulate its state safely.
+**Action:** When implementing async functionality attached to UI buttons, immediately update the button's visual state (disable it and change text to a loading indicator) before starting the thread, and safely cast the generic `Sender` to handle it. Revert these changes in the UI thread via `TThread.Synchronize` within success/error callbacks to ensure a seamless, responsive UX and prevent invalid overlaps.
