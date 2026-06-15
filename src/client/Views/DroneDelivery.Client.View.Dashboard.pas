@@ -376,6 +376,8 @@ var LAni: TAniIndicator;
 begin
   ClearDroneCards;
   LAni := TAniIndicator.Create(Self); LAni.Parent := Self; LAni.Align := TAlignLayout.Center; LAni.Enabled := True;
+  btnRefresh.Enabled := False;
+  btnRefresh.Text := 'Atualizando...';
   TThread.CreateAnonymousThread(procedure
   var LLista: TObjectList<TDroneDTO>;
   begin
@@ -384,6 +386,8 @@ begin
     var LDrone: TDroneDTO;
     begin
       LAni.Enabled := False; LAni.Free;
+      btnRefresh.Enabled := True;
+      btnRefresh.Text := 'Atualizar';
       if Assigned(LLista) then try for LDrone in LLista do BuildDroneCard(LDrone); finally LLista.Free; end;
     end);
   end).Start;
@@ -717,14 +721,37 @@ begin
     Exit;
   end;
   FLblMapStatus.Text := 'Buscando endere'#231'o...';
+  if Sender is TCornerButton then
+  begin
+    TCornerButton(Sender).Enabled := False;
+    TCornerButton(Sender).Text := 'Buscando...';
+  end;
   TMapService.GeocodeAddressAsync(LSearchedText,
     procedure(Lat, Lng: Double)
     begin
-      TThread.Synchronize(nil, procedure begin AddWaypointToMap(LSearchedText, Lat, Lng); FEditWaypoint.Text := ''; FLblMapStatus.Text := 'Parada adicionada: ' + LSearchedText; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        AddWaypointToMap(LSearchedText, Lat, Lng);
+        FEditWaypoint.Text := '';
+        FLblMapStatus.Text := 'Parada adicionada: ' + LSearchedText;
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := '+ Adicionar Parada';
+        end;
+      end);
     end,
     procedure(E: string)
     begin
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := E; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := E;
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := '+ Adicionar Parada';
+        end;
+      end);
     end);
 end;
 
@@ -764,15 +791,36 @@ begin
     Exit;
   end;
   FLblMapStatus.Text := 'Calculando rota... aguarde.';
+  if Sender is TCornerButton then
+  begin
+    TCornerButton(Sender).Enabled := False;
+    TCornerButton(Sender).Text := 'Calculando...';
+  end;
   FViewModel.CalcularRota(FSelectedDroneId, FWaypoints,
     procedure(Resp: string)
     begin
       EnviarRotaAoMapa(Resp);
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.'; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := 'Rota calculada e enviada ao mapa.';
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := 'Calcular Rota';
+        end;
+      end);
     end,
     procedure(E: string)
     begin
-      TThread.Synchronize(nil, procedure begin FLblMapStatus.Text := E; end);
+      TThread.Synchronize(nil, procedure
+      begin
+        FLblMapStatus.Text := E;
+        if Sender is TCornerButton then
+        begin
+          TCornerButton(Sender).Enabled := True;
+          TCornerButton(Sender).Text := 'Calcular Rota';
+        end;
+      end);
     end);
 end;
 
