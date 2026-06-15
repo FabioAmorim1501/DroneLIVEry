@@ -51,12 +51,14 @@ var
   LPedidosPendentes: TList<TPedidoEntity>;
   LLocaisMap: TDictionary<string, TLocalEntity>;
   LPedidoDestinos: TDictionary<TPedidoEntity, TLocalEntity>;
+  LDistanciasRegressoMap: TDictionary<string, Double>;
   I, LMelhorIndex: Integer;
 begin
   LArrayRotas := TJSONArray.Create;
   LPedidosPendentes := TList<TPedidoEntity>.Create;
   LLocaisMap := TDictionary<string, TLocalEntity>.Create;
   LPedidoDestinos := TDictionary<TPedidoEntity, TLocalEntity>.Create;
+  LDistanciasRegressoMap := TDictionary<string, Double>.Create;
   try
     // 1. Localiza a Base Operacional (Hub) e indexa os locais para O(1) lookup
     LLocalHub := nil;
@@ -70,6 +72,10 @@ begin
 
     if LLocalHub = nil then
       raise Exception.Create('Falha de roteamento: Base operacional (Hub) não localizada na matriz de locais.');
+
+    // ⚡ Bolt: Performance Fix - Pre-calculate return distances to Hub to avoid O(N^2) Haversine math
+    for LLocalDestino in ALocais do
+      LDistanciasRegressoMap.AddOrSetValue(LLocalDestino.Id, CalcularDistanciaKm(LLocalDestino.Latitude, LLocalDestino.Longitude, LLocalHub.Latitude, LLocalHub.Longitude));
 
     // 2. Alimenta a fila de processamento em memória
     for LPedido in APedidos do
@@ -121,9 +127,8 @@ begin
 
           if LDistanciaAtePedido < LMenorDistancia then
           begin
-            // Projetar o custo de bateria para o regresso à base
-            LDistanciaRegresso := CalcularDistanciaKm(LLocalDestinoCandidato.Latitude, LLocalDestinoCandidato.Longitude,
-                                                      LLocalHub.Latitude, LLocalHub.Longitude);
+            // Projetar o custo de bateria para o regresso à base (O(1) look up instead of recalculating Haversine)
+            LDistanciasRegressoMap.TryGetValue(LLocalDestinoCandidato.Id, LDistanciaRegresso);
 
             // Validação absoluta das restrições de autonomia da aeronave
             if (LDistanciaPercorrida + LDistanciaAtePedido + LDistanciaRegresso <= LDrone.AutonomiaKm) then
@@ -178,6 +183,7 @@ begin
 
     Result := LArrayRotas.ToJSON;
   finally
+    LDistanciasRegressoMap.Free;
     LPedidoDestinos.Free;
     LLocaisMap.Free;
     LPedidosPendentes.Free;
