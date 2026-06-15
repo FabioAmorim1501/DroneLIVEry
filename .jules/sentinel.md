@@ -26,3 +26,8 @@
 **Vulnerability:** Adding the backend `API_SECRET_KEY` environment variable check to the FMX client app exposes the backend master secret, requiring it to be bundled or accessible in the client environment.
 **Learning:** Client applications (frontend) should never manage, know, or require server-side backend secrets. They must rely on user-authenticated tokens (like JWTs) acquired via login.
 **Prevention:** Never use `GetEnvironmentVariable` to retrieve backend API secrets inside frontend/client code. Authentication changes must correctly split client-session logic from backend-secret logic.
+
+## 2024-06-07 - [CRITICAL] Memory Corruptions via Double-Free / Memory Leak in try..finally blocks
+**Vulnerability:** Calling `Exit;` before an object is explicitly freed during an error flow bypasses cleanup resulting in memory leaks that can be abused for Denial of Service attacks.
+**Learning:** If variables are instantiated before conditional validation logic, missing `try..finally` blocks can lead to uncollected memory. Conversely, adding manual `Free` before `Exit` within a `try..finally` will result in a double-free vulnerability.
+**Prevention:** In Object Pascal, always instantiate objects directly after variable declaration and immediately use a `try..finally` to ensure memory is released appropriately without explicitly freeing on error pathways.
